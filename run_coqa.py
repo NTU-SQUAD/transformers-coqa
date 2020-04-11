@@ -36,11 +36,7 @@ from transformers import (
     get_linear_schedule_with_warmup,
     squad_convert_examples_to_features,
 )
-from transformers.data.metrics.squad_metrics import (
-    compute_predictions_log_probs,
-    compute_predictions_logits,
-    squad_evaluate,
-)
+
 from transformers.data.processors.squad import SquadResult, SquadV1Processor, SquadV2Processor
 
 from .modeling_auto import (
@@ -51,7 +47,8 @@ from .data.processors.coqa import (
     CoqaProcessor,
     CoqaResult,
     coqa_convert_examples_to_features,
-    write_predictions)
+)
+from .data.metrics.coqa_metrics import compute_predictions_logits, coqa_evaluate
 
 try:
     from torch.utils.tensorboard import SummaryWriter
@@ -225,12 +222,11 @@ def train(args, train_dataset, model, tokenizer):
 
                 # Log metrics
                 if args.local_rank in [-1, 0] and args.logging_steps > 0 and global_step % args.logging_steps == 0:
-                    # TODO：Write evaluate metrics
                     # Only evaluate when single GPU otherwise metrics may not average well
-                    # if args.local_rank == -1 and args.evaluate_during_training:
-                    #     results = evaluate(args, model, tokenizer)
-                    #     for key, value in results.items():
-                    #         tb_writer.add_scalar("eval_{}".format(key), value, global_step)
+                    if args.local_rank == -1 and args.evaluate_during_training:
+                        results = evaluate(args, model, tokenizer)
+                        for key, value in results.items():
+                            tb_writer.add_scalar("eval_{}".format(key), value, global_step)
                     tb_writer.add_scalar("lr", scheduler.get_lr()[0], global_step)
                     tb_writer.add_scalar("loss", (tr_loss - logging_loss) / args.logging_steps, global_step)
                     logging_loss = tr_loss
@@ -326,13 +322,13 @@ def evaluate(args, model, tokenizer, prefix=""):
     output_prediction_file = os.path.join(args.output_dir, "predictions_{}.json".format(prefix))
     output_nbest_file = os.path.join(args.output_dir, "nbest_predictions_{}.json".format(prefix))
 
-    write_predictions(examples, features, all_results,
+    predictions, evaluator = compute_predictions_logits(examples, features, all_results,
                       args.n_best_size, args.max_answer_length,
                       args.do_lower_case, output_prediction_file,
-                      output_nbest_file, args.verbose_logging)
+                      output_nbest_file, args.verbose_logging, tokenizer)
 
-    # TODO: directly calculate F1 here
-    # return results
+    results = coqa_evaluate(examples, predictions, evaluator)
+    return results
 
 
 def load_and_cache_examples(args, tokenizer, evaluate=False, output_examples=False):

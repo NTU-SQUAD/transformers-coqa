@@ -84,6 +84,7 @@ class AlbertForConversationalQuestionAnswering(AlbertPreTrainedModel):
 
         sequence_output = outputs[0]
 
+        # TODO: desgin net after bert
         logits = self.qa_outputs(sequence_output)
         start_logits, end_logits = logits.split(1, dim=-1)
         start_logits = start_logits.squeeze(-1)
