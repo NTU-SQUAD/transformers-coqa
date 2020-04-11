@@ -240,12 +240,13 @@ def coqa_convert_example_to_features(example, tokenizer, max_seq_length, doc_str
     return features
 
 
-def coqa_convert_examples_to_features(examples, max_seq_length, doc_stride, max_query_length, is_training, threads=1):
+def coqa_convert_examples_to_features(examples, tokenizer, max_seq_length, doc_stride, max_query_length, is_training, threads=1):
     features = []
     threads = min(threads, cpu_count())
     with Pool(threads, initializer=coqa_convert_example_to_features_init, initargs=(tokenizer,)) as p:
         annotate_ = partial(
             coqa_convert_example_to_features,
+            tokenizer=tokenizer,
             max_seq_length=max_seq_length,
             doc_stride=doc_stride,
             max_query_length=max_query_length,
@@ -278,17 +279,14 @@ def coqa_convert_examples_to_features(examples, max_seq_length, doc_stride, max_
     if not is_training:
         all_example_index = torch.arange(all_input_ids.size(0),
                                          dtype=torch.long)
-        dataset = TensorDataset(all_input_ids, all_input_mask,
-                                all_segment_ids, all_example_index)
+        dataset = TensorDataset(all_input_ids, all_segment_ids, all_input_mask, all_example_index)
     else:
         all_start_positions = torch.tensor([f.start_position for f in features], dtype=torch.long)
         all_end_positions = torch.tensor([f.end_position for f in features], dtype=torch.long)
         all_rational_mask = torch.tensor([f.rational_mask for f in features], dtype=torch.long)
         all_cls_idx = torch.tensor([f.cls_idx for f in features], dtype=torch.long)
-        dataset = TensorDataset(all_input_ids, all_input_mask,
-                                all_segment_ids, all_start_positions,
-                                all_end_positions, all_rational_mask,
-                                all_cls_idx)
+        dataset = TensorDataset(all_input_ids, all_segment_ids, all_input_mask, all_start_positions,
+                                all_end_positions, all_rational_mask, all_cls_idx)
 
     return features, dataset
 

@@ -177,17 +177,17 @@ def train(args, train_dataset, model, tokenizer):
 
             inputs = {
                 "input_ids": batch[0],
-                "input_mask": batch[1],
-                "segment_ids": batch[2],
+                "token_type_ids": batch[1],
+                "attention_mask": batch[2],
                 "start_positions": batch[3],
                 "end_positions": batch[4],
                 "rational_mask": batch[5],
                 "cls_idx": batch[6],
             }
 
-            outputs = model(**inputs)
+            loss = model(**inputs)
             # model outputs are always tuple in transformers (see doc)
-            loss = outputs[0]
+            # loss = outputs[0]
 
             if args.n_gpu > 1:
                 loss = loss.mean()  # mean() to average on multi-gpu parallel (not distributed) training
@@ -284,8 +284,8 @@ def evaluate(args, model, tokenizer, prefix=""):
         with torch.no_grad():
             inputs = {
                 "input_ids": batch[0],
-                "input_mask": batch[1],
-                "segment_ids": batch[2],
+                "token_type_ids": batch[1],
+                "attention_mask": batch[2],
             }
 
             example_indices = batch[3]
@@ -314,12 +314,12 @@ def evaluate(args, model, tokenizer, prefix=""):
     output_prediction_file = os.path.join(args.output_dir, "predictions_{}.json".format(prefix))
     output_nbest_file = os.path.join(args.output_dir, "nbest_predictions_{}.json".format(prefix))
 
-    predictions, evaluator = compute_predictions_logits(examples, features, all_results,
+    predictions = compute_predictions_logits(examples, features, all_results,
                       args.n_best_size, args.max_answer_length,
                       args.do_lower_case, output_prediction_file,
                       output_nbest_file, args.verbose_logging, tokenizer)
 
-    results = coqa_evaluate(examples, predictions, evaluator)
+    results = coqa_evaluate(predictions, output_prediction_file)
     return results
 
 
