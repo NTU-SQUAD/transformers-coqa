@@ -13,7 +13,7 @@ import spacy
 import torch
 from torch.utils.data import TensorDataset
 from tqdm import tqdm
-from .utils import DataProcessor
+from data.processors.utils import DataProcessor
 from transformers import BasicTokenizer
 
 logger = logging.getLogger(__name__)

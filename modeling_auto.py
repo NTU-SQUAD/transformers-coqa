@@ -23,7 +23,7 @@ from transformers import (
     AlbertConfig
 )
 
-from .modeling_albert import AlbertForConversationalQuestionAnswering
+from modeling_albert import AlbertForConversationalQuestionAnswering
 
 logger = logging.getLogger(__name__)
 
@@ -72,7 +72,7 @@ class AutoModelForConversationalQuestionAnswering(object):
             config = BertConfig.from_pretrained('bert-base-uncased')    # Download configuration from S3 and cache.
             model = AutoModelForSequenceClassification.from_config(config)  # E.g. model was saved using `save_pretrained('./test/saved_model/')`
         """
-        for config_class, model_class in MODEL_FOR_QUESTION_ANSWERING_MAPPING.items():
+        for config_class, model_class in MODEL_FOR_CONVERSATIONAL_QUESTION_ANSWERING_MAPPING.items():
             if isinstance(config, config_class):
                 return model_class(config)
 
@@ -81,7 +81,7 @@ class AutoModelForConversationalQuestionAnswering(object):
             "Model type should be one of {}.".format(
                 config.__class__,
                 cls.__name__,
-                ", ".join(c.__name__ for c in MODEL_FOR_QUESTION_ANSWERING_MAPPING.keys()),
+                ", ".join(c.__name__ for c in MODEL_FOR_CONVERSATIONAL_QUESTION_ANSWERING_MAPPING.keys()),
             )
         )
 
@@ -160,7 +160,7 @@ class AutoModelForConversationalQuestionAnswering(object):
         if not isinstance(config, PretrainedConfig):
             config = AutoConfig.from_pretrained(pretrained_model_name_or_path, **kwargs)
 
-        for config_class, model_class in MODEL_FOR_QUESTION_ANSWERING_MAPPING.items():
+        for config_class, model_class in MODEL_FOR_CONVERSATIONAL_QUESTION_ANSWERING_MAPPING.items():
             if isinstance(config, config_class):
                 return model_class.from_pretrained(pretrained_model_name_or_path, *model_args, config=config, **kwargs)
 
@@ -169,6 +169,6 @@ class AutoModelForConversationalQuestionAnswering(object):
             "Model type should be one of {}.".format(
                 config.__class__,
                 cls.__name__,
-                ", ".join(c.__name__ for c in MODEL_FOR_QUESTION_ANSWERING_MAPPING.keys()),
+                ", ".join(c.__name__ for c in MODEL_FOR_CONVERSATIONAL_QUESTION_ANSWERING_MAPPING.keys()),
             )
         )

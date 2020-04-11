@@ -34,21 +34,13 @@ from transformers import (
     AutoConfig,
     AutoTokenizer,
     get_linear_schedule_with_warmup,
-    squad_convert_examples_to_features,
 )
 
-from transformers.data.processors.squad import SquadResult, SquadV1Processor, SquadV2Processor
 
-from .modeling_auto import (
-    MODEL_FOR_CONVERSATIONAL_QUESTION_ANSWERING_MAPPING,
+from modeling_auto import MODEL_FOR_CONVERSATIONAL_QUESTION_ANSWERING_MAPPING, \
     AutoModelForConversationalQuestionAnswering
-)
-from .data.processors.coqa import (
-    CoqaProcessor,
-    CoqaResult,
-    coqa_convert_examples_to_features,
-)
-from .data.metrics.coqa_metrics import compute_predictions_logits, coqa_evaluate
+from data.processors.coqa import CoqaProcessor, CoqaResult, coqa_convert_examples_to_features
+from data.metrics.coqa_metrics import compute_predictions_logits, coqa_evaluate
 
 try:
     from torch.utils.tensorboard import SummaryWriter
@@ -364,10 +356,10 @@ def load_and_cache_examples(args, tokenizer, evaluate=False, output_examples=Fal
         else:
             processor = CoqaProcessor()
             if evaluate:
-                examples = processor.get_examples(args.data_dir, args.history_len, args.add_qa_tag,
+                examples = processor.get_examples(args.data_dir, args.history_len, args.qa_tag,
                                                   filename=args.predict_file)
             else:
-                examples = processor.get_examples(args.data_dir, args.history_len, args.add_qa_tag,
+                examples = processor.get_examples(args.data_dir, args.history_len, args.qa_tag,
                                                   filename=args.train_file)
 
         features, dataset = coqa_convert_examples_to_features(
