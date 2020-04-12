@@ -21,6 +21,7 @@ import logging
 import os
 import random
 import timeit
+from datetime import datetime, time
 
 import numpy as np
 import torch
@@ -48,7 +49,8 @@ except ImportError:
     from tensorboardX import SummaryWriter
 
 logger = logging.getLogger(__name__)
-
+fileHandler = logging.FileHandler('{:%Y-%m-%d}--{}.log'.format(datetime.now(), time.time()))
+logger.addHandler(fileHandler)
 MODEL_CONFIG_CLASSES = list(MODEL_FOR_CONVERSATIONAL_QUESTION_ANSWERING_MAPPING.keys())
 MODEL_TYPES = tuple(conf.model_type for conf in MODEL_CONFIG_CLASSES)
 
@@ -221,6 +223,8 @@ def train(args, train_dataset, model, tokenizer):
                             tb_writer.add_scalar("eval_{}".format(key), value, global_step)
                     tb_writer.add_scalar("lr", scheduler.get_lr()[0], global_step)
                     tb_writer.add_scalar("loss", (tr_loss - logging_loss) / args.logging_steps, global_step)
+                    logger.info('Step: {}\tLearning rate: {}\tLoss: {}\t'.format(global_step, scheduler.get_lr()[0], (
+                                tr_loss - logging_loss) / args.logging_steps))
                     logging_loss = tr_loss
 
                 # Save model checkpoint
