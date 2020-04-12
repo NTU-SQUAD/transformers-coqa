@@ -212,8 +212,6 @@ def train(args, train_dataset, model, tokenizer):
             }
 
             loss = model(**inputs)
-            # model outputs are always tuple in transformers (see doc)
-            # loss = outputs[0]
 
             if args.n_gpu > 1:
                 loss = loss.mean()  # mean() to average on multi-gpu parallel (not distributed) training
@@ -228,12 +226,12 @@ def train(args, train_dataset, model, tokenizer):
 
             tr_loss += loss.item()
             if (step + 1) % args.gradient_accumulation_steps == 0:
-                if args.fp16:
-                    torch.nn.utils.clip_grad_norm_(
-                        amp.master_params(optimizer), args.max_grad_norm)
-                else:
-                    torch.nn.utils.clip_grad_norm_(
-                        model.parameters(), args.max_grad_norm)
+                # if args.fp16:
+                #     torch.nn.utils.clip_grad_norm_(
+                #         amp.master_params(optimizer), args.max_grad_norm)
+                # else:
+                #     torch.nn.utils.clip_grad_norm_(
+                #         model.parameters(), args.max_grad_norm)
 
                 optimizer.step()
                 scheduler.step()  # Update learning rate schedule
@@ -243,15 +241,13 @@ def train(args, train_dataset, model, tokenizer):
                 # Log metrics
                 if args.local_rank in [-1, 0] and args.logging_steps > 0 and global_step % args.logging_steps == 0:
                     # Only evaluate when single GPU otherwise metrics may not average well
-                    if args.local_rank == -1 and args.evaluate_during_training:
-                        results = evaluate(args, model, tokenizer)
-                        for key, value in results.items():
-                            tb_writer.add_scalar(
-                                "eval_{}".format(key), value, global_step)
-                    tb_writer.add_scalar(
-                        "lr", scheduler.get_lr()[0], global_step)
-                    tb_writer.add_scalar(
-                        "loss", (tr_loss - logging_loss) / args.logging_steps, global_step)
+                    # if args.local_rank == -1 and args.evaluate_during_training:
+                    #     results = evaluate(args, model, tokenizer)
+                    #     for key, value in results.items():
+                    #         tb_writer.add_scalar(
+                    #             "eval_{}".format(key), value, global_step)
+                    tb_writer.add_scalar("lr", scheduler.get_lr()[0], global_step)
+                    tb_writer.add_scalar("loss", (tr_loss - logging_loss) / args.logging_steps, global_step)
                     logger.info('Step: {}\tLearning rate: {}\tLoss: {}\t'.format(global_step, scheduler.get_lr()[0], (
                                 tr_loss - logging_loss) / args.logging_steps))
                     logging_loss = tr_loss
