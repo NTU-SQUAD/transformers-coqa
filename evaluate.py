@@ -4,17 +4,29 @@ The code is based partially on SQuAD 2.0 evaluation script.
 """
 import argparse
 import json
+import logging
 import re
 import string
 import sys
 
 from collections import Counter, OrderedDict
+from datetime import datetime
 
 OPTS = None
 
 out_domain = ["reddit", "science"]
 in_domain = ["mctest", "gutenberg", "race", "cnn", "wikipedia"]
 domain_mappings = {"mctest":"children_stories", "gutenberg":"literature", "race":"mid-high_school", "cnn":"news", "wikipedia":"wikipedia", "science":"science", "reddit":"reddit"}
+
+# logger level
+logger = logging.getLogger(__file__)
+logger.setLevel(logging.INFO)
+
+fileHandler = logging.FileHandler('{}.log'.format(datetime.now().strftime("%Y-%m-%d-%H:%M:%S")))
+streamHandler = logging.StreamHandler()
+# connect the logger to the channel
+logger.addHandler(fileHandler)
+logger.addHandler(streamHandler)
 
 
 class CoQAEvaluator():
@@ -243,7 +255,7 @@ def main():
     if OPTS.pred_file:
         with open(OPTS.pred_file) as f:
             pred_data = CoQAEvaluator.preds_to_dict(OPTS.pred_file)
-        print(json.dumps(evaluator.model_performance(pred_data), indent=2))
+        logger.info(json.dumps(evaluator.model_performance(pred_data), indent=2))
 
 if __name__ == '__main__':
     OPTS = parse_args()

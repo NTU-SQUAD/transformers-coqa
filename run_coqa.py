@@ -17,10 +17,10 @@
 
 import argparse
 import glob
+import json
 import logging
 import os
 import random
-import time
 import timeit
 from datetime import datetime
 
@@ -50,8 +50,7 @@ except ImportError:
     from tensorboardX import SummaryWriter
 
 logger = logging.getLogger(__name__)
-fileHandler = logging.FileHandler(
-    '{:%Y-%m-%d}--{}.log'.format(datetime.now(), time.time()))
+fileHandler = logging.FileHandler('{}.log'.format(datetime.now().strftime("%Y-%m-%d-%H:%M:%S")))
 logger.addHandler(fileHandler)
 MODEL_CONFIG_CLASSES = list(
     MODEL_FOR_CONVERSATIONAL_QUESTION_ANSWERING_MAPPING.keys())
@@ -360,6 +359,7 @@ def evaluate(args, model, tokenizer, prefix=""):
                                              output_nbest_file, args.verbose_logging, tokenizer)
 
     results = coqa_evaluate(os.path.join(args.data_dir, args.predict_file), output_prediction_file)
+    logger.info(json.dumps(results))
     return results
 
 
@@ -758,7 +758,7 @@ def main():
     if args.do_eval and args.local_rank in [-1, 0]:
         if args.do_train:
             logger.info(
-                "Loading checkpoints saved during training for evaluation")
+                "Loading checkpointlogger.setLevel(logging.DEBUG)s saved during training for evaluation")
             checkpoints = [args.output_dir]
             if args.eval_all_checkpoints:
                 checkpoints = list(
