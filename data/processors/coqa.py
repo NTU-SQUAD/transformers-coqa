@@ -609,7 +609,7 @@ class CoqaProcessor(DataProcessor):
 
                 long_question += (' <Q> ' if add_qa_tag else ' ') + datum['questions'][j]['input_text']
                 if j < i:
-                    long_question += (' <A> ' if add_qa_tag else ' ') + datum['answers'][j]['input_text']
+                    long_question += (' <A> ' if add_qa_tag else ' ') + datum['answers'][j]['input_text'] + ' [SEP]'
 
                 long_question = long_question.strip()
                 long_questions.append(long_question)
@@ -623,7 +623,7 @@ class CoqaProcessor(DataProcessor):
                 end_position=_qas['answer_span'][1],
                 rational_start_position=r_start,
                 rational_end_position=r_end,
-                additional_answers=_qas['additional_answers'],
+                additional_answers=_qas['additional_answers'] if 'additional_answers' in _qas else None,
             )
             examples.append(example)
 
