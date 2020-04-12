@@ -210,6 +210,9 @@ def train(args, train_dataset, model, tokenizer):
                 "cls_idx": batch[6],
             }
 
+            if args.model_type in ["xlm", "roberta", "distilbert", "camembert"]:
+                del inputs["token_type_ids"]
+
             loss = model(**inputs)
 
             if args.n_gpu > 1:
@@ -323,6 +326,9 @@ def evaluate(args, model, tokenizer, prefix=""):
                 "token_type_ids": batch[1],
                 "attention_mask": batch[2],
             }
+
+            if args.model_type in ["xlm", "roberta", "distilbert", "camembert"]:
+                del inputs["token_type_ids"]
 
             example_indices = batch[3]
             outputs = model(**inputs)
