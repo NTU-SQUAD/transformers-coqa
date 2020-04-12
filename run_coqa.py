@@ -359,7 +359,7 @@ def evaluate(args, model, tokenizer, prefix=""):
                                              args.do_lower_case, output_prediction_file,
                                              output_nbest_file, args.verbose_logging, tokenizer)
 
-    results = coqa_evaluate(args.predict_file, output_prediction_file)
+    results = coqa_evaluate(os.path.join(args.data_dir, args.predict_file), output_prediction_file)
     return results
 
 
@@ -579,7 +579,7 @@ def main():
 
     parser.add_argument("--logging_steps", type=int,
                         default=50, help="Log every X updates steps.")
-    parser.add_argument("--save_steps", type=int, default=500,
+    parser.add_argument("--save_steps", type=int, default=5000,
                         help="Save checkpoint every X updates steps.")
     parser.add_argument(
         "--eval_all_checkpoints",
