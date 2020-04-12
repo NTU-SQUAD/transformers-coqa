@@ -911,4 +911,4 @@ def coqa_evaluate(output_prediction_file):
 
     with open(output_prediction_file) as f:
         pred_data = CoQAEvaluator.preds_to_dict(output_prediction_file)
-    print(json.dumps(evaluator.model_performance(pred_data), indent=2))
+    return evaluator.model_performance(pred_data)

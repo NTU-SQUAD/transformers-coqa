@@ -20,7 +20,9 @@ import glob
 import logging
 import os
 import random
+import time
 import timeit
+from datetime import datetime
 
 import numpy as np
 import torch
@@ -48,7 +50,8 @@ except ImportError:
     from tensorboardX import SummaryWriter
 
 logger = logging.getLogger(__name__)
-
+fileHandler = logging.FileHandler('{:%Y-%m-%d}--{}.log'.format(datetime.now(), time.time()))
+logger.addHandler(fileHandler)
 MODEL_CONFIG_CLASSES = list(MODEL_FOR_CONVERSATIONAL_QUESTION_ANSWERING_MAPPING.keys())
 MODEL_TYPES = tuple(conf.model_type for conf in MODEL_CONFIG_CLASSES)
 
@@ -221,6 +224,8 @@ def train(args, train_dataset, model, tokenizer):
                             tb_writer.add_scalar("eval_{}".format(key), value, global_step)
                     tb_writer.add_scalar("lr", scheduler.get_lr()[0], global_step)
                     tb_writer.add_scalar("loss", (tr_loss - logging_loss) / args.logging_steps, global_step)
+                    logger.info('Step: {}\tLearning rate: {}\tLoss: {}\t'.format(global_step, scheduler.get_lr()[0], (
+                                tr_loss - logging_loss) / args.logging_steps))
                     logging_loss = tr_loss
 
                 # Save model checkpoint
@@ -709,13 +714,12 @@ def main():
             model.to(args.device)
 
             # Evaluate
-            evaluate(args, model, tokenizer, prefix=global_step)
-            # result = evaluate(args, model, tokenizer, prefix=global_step)
-            #
-            # result = dict((k + ("_{}".format(global_step) if global_step else ""), v) for k, v in result.items())
-            # results.update(result)
+            result = evaluate(args, model, tokenizer, prefix=global_step)
 
-    # logger.info("Results: {}".format(results))
+            result = dict((k + ("_{}".format(global_step) if global_step else ""), v) for k, v in result.items())
+            results.update(result)
+
+    logger.info("Results: {}".format(results))
 
     return results
 

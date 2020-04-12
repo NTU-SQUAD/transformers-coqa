@@ -1,4 +1,5 @@
 *.json
+cached_*
 runs/
 *.zip
 .idea
