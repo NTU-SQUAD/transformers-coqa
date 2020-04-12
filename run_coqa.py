@@ -363,7 +363,7 @@ def evaluate(args, model, tokenizer, prefix=""):
                                              args.do_lower_case, output_prediction_file,
                                              output_nbest_file, args.verbose_logging, tokenizer)
 
-    results = coqa_evaluate(predictions, output_prediction_file)
+    results = coqa_evaluate(args.predict_file, output_prediction_file)
     return results
 
 

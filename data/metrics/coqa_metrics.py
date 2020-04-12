@@ -906,8 +906,9 @@ def _normalize_answer(s):
         print(json.dumps(evaluator.model_performance(pred_dict), indent=2))
     return white_space_fix(remove_articles(remove_punc(lower(s))))
 
-def coqa_evaluate(output_prediction_file):
-    evaluator = CoQAEvaluator(output_prediction_file)
+
+def coqa_evaluate(dev_file, output_prediction_file):
+    evaluator = CoQAEvaluator(dev_file)
 
     with open(output_prediction_file) as f:
         pred_data = CoQAEvaluator.preds_to_dict(output_prediction_file)
