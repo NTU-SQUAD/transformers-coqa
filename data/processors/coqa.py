@@ -494,7 +494,7 @@ class CoqaProcessor(DataProcessor):
                 end_index = i
         return (start_index, end_index)
 
-    def get_examples(self, data_dir, history_len, add_qa_tag, filename=None):
+    def get_examples(self, data_dir, history_len, add_qa_tag, filename=None,threads=1):
         """
         Returns the training examples from the data directory.
 
@@ -511,105 +511,119 @@ class CoqaProcessor(DataProcessor):
                 os.path.join(data_dir, self.train_file if filename is None else filename), "r", encoding="utf-8"
         ) as reader:
             input_data = json.load(reader)["data"]
-        return self._create_examples(input_data, history_len, add_qa_tag)
+
+        threads = min(threads, cpu_count())
+        with Pool(threads) as p:
+            annotate_ = partial(self._create_examples,  history_len=history_len, add_qa_tag=add_qa_tag)
+            examples = list(tqdm(
+                p.imap(annotate_, input_data),
+                total=len(input_data),
+                desc="convert coqa examples to features",
+            ))
+        # print(len(examples))
+        examples = [item for sublist in examples for item in sublist]
+        # print(len(examples))
+        return examples
+        # return self._create_examples(input_data, history_len, add_qa_tag)
 
     def _create_examples(self, input_data, history_len, add_qa_tag):
         nlp = spacy.load('en_core_web_sm', parser=False)
         examples = []
-        for data_idx in tqdm(range(len(input_data)), desc='Generating examples'):
-            datum = input_data[data_idx]
-            context_str = datum['story']
-            _datum = {
-                'context': context_str,
-                'source': datum['source'],
-                'id': datum['id'],
-                'filename': datum['filename']
+        # for data_idx in tqdm(range(len(input_data)), desc='Generating examples'):
+        #     datum = input_data[data_idx]
+        datum = input_data
+        context_str = datum['story']
+        _datum = {
+            'context': context_str,
+            'source': datum['source'],
+            'id': datum['id'],
+            'filename': datum['filename']
+        }
+        nlp_context = nlp(self.pre_proc(context_str))
+        _datum['annotated_context'] = self.process(nlp_context)
+        _datum['raw_context_offsets'] = self.get_raw_context_offsets(
+            _datum['annotated_context']['word'], context_str)
+        assert len(datum['questions']) == len(datum['answers'])
+        additional_answers = {}
+        if 'additional_answers' in datum:
+            for k, answer in datum['additional_answers'].items():
+                if len(answer) == len(datum['answers']):
+                    for ex in answer:
+                        idx = ex['turn_id']
+                        if idx not in additional_answers:
+                            additional_answers[idx] = []
+                        additional_answers[idx].append(ex['input_text'])
+        for i in range(len(datum['questions'])):
+            question, answer = datum['questions'][i], datum['answers'][i]
+            assert question['turn_id'] == answer['turn_id']
+
+            idx = question['turn_id']
+            _qas = {
+                'turn_id': idx,
+                'question': question['input_text'],
+                'answer': answer['input_text']
             }
-            nlp_context = nlp(self.pre_proc(context_str))
-            _datum['annotated_context'] = self.process(nlp_context)
-            _datum['raw_context_offsets'] = self.get_raw_context_offsets(
-                _datum['annotated_context']['word'], context_str)
-            assert len(datum['questions']) == len(datum['answers'])
-            additional_answers = {}
-            if 'additional_answers' in datum:
-                for k, answer in datum['additional_answers'].items():
-                    if len(answer) == len(datum['answers']):
-                        for ex in answer:
-                            idx = ex['turn_id']
-                            if idx not in additional_answers:
-                                additional_answers[idx] = []
-                            additional_answers[idx].append(ex['input_text'])
-            for i in range(len(datum['questions'])):
-                question, answer = datum['questions'][i], datum['answers'][i]
-                assert question['turn_id'] == answer['turn_id']
+            if idx in additional_answers:
+                _qas['additional_answers'] = additional_answers[idx]
 
-                idx = question['turn_id']
-                _qas = {
-                    'turn_id': idx,
-                    'question': question['input_text'],
-                    'answer': answer['input_text']
-                }
-                if idx in additional_answers:
-                    _qas['additional_answers'] = additional_answers[idx]
+            _qas['raw_answer'] = answer['input_text']
 
-                _qas['raw_answer'] = answer['input_text']
+            if _qas['raw_answer'].lower() in ['yes', 'yes.']:
+                _qas['raw_answer'] = 'yes'
+            if _qas['raw_answer'].lower() in ['no', 'no.']:
+                _qas['raw_answer'] = 'no'
+            if _qas['raw_answer'].lower() in ['unknown', 'unknown.']:
+                _qas['raw_answer'] = 'unknown'
 
-                if _qas['raw_answer'].lower() in ['yes', 'yes.']:
-                    _qas['raw_answer'] = 'yes'
-                if _qas['raw_answer'].lower() in ['no', 'no.']:
-                    _qas['raw_answer'] = 'no'
-                if _qas['raw_answer'].lower() in ['unknown', 'unknown.']:
-                    _qas['raw_answer'] = 'unknown'
+            _qas['answer_span_start'] = answer['span_start']
+            _qas['answer_span_end'] = answer['span_end']
+            start = answer['span_start']
+            end = answer['span_end']
+            chosen_text = _datum['context'][start:end].lower()
+            while len(chosen_text) > 0 and self.is_whitespace(chosen_text[0]):
+                chosen_text = chosen_text[1:]
+                start += 1
+            while len(chosen_text) > 0 and self.is_whitespace(chosen_text[-1]):
+                chosen_text = chosen_text[:-1]
+                end -= 1
+            r_start, r_end = self.find_span(_datum['raw_context_offsets'], start,
+                                            end)
+            input_text = _qas['answer'].strip().lower()
+            if input_text in chosen_text:
+                p = chosen_text.find(input_text)
+                _qas['answer_span'] = self.find_span(_datum['raw_context_offsets'],
+                                                     start + p,
+                                                     start + p + len(input_text))
+            else:
+                _qas['answer_span'] = self.find_span_with_gt(
+                    _datum['context'], _datum['raw_context_offsets'],
+                    input_text)
+            long_question = ''
+            for j in range(i - history_len, i + 1):
+                if j < 0:
+                    continue
+                long_question += (' <Q> ' if add_qa_tag else
+                                  ' ') + datum['questions'][j]['input_text']
+                if j < i:
+                    long_question += (' <A> ' if add_qa_tag else
+                                      ' ') + datum['answers'][j]['input_text']
 
-                _qas['answer_span_start'] = answer['span_start']
-                _qas['answer_span_end'] = answer['span_end']
-                start = answer['span_start']
-                end = answer['span_end']
-                chosen_text = _datum['context'][start:end].lower()
-                while len(chosen_text) > 0 and self.is_whitespace(chosen_text[0]):
-                    chosen_text = chosen_text[1:]
-                    start += 1
-                while len(chosen_text) > 0 and self.is_whitespace(chosen_text[-1]):
-                    chosen_text = chosen_text[:-1]
-                    end -= 1
-                r_start, r_end = self.find_span(_datum['raw_context_offsets'], start,
-                                                end)
-                input_text = _qas['answer'].strip().lower()
-                if input_text in chosen_text:
-                    p = chosen_text.find(input_text)
-                    _qas['answer_span'] = self.find_span(_datum['raw_context_offsets'],
-                                                         start + p,
-                                                         start + p + len(input_text))
-                else:
-                    _qas['answer_span'] = self.find_span_with_gt(
-                        _datum['context'], _datum['raw_context_offsets'],
-                        input_text)
-                long_question = ''
-                for j in range(i - history_len, i + 1):
-                    if j < 0:
-                        continue
-                    long_question += (' <Q> ' if add_qa_tag else
-                                      ' ') + datum['questions'][j]['input_text']
-                    if j < i:
-                        long_question += (' <A> ' if add_qa_tag else
-                                          ' ') + datum['answers'][j]['input_text']
-
-                long_question = long_question.strip()
-                _qas['raw_long_question'] = long_question
-                _qas['annotated_long_question'] = self.process(
-                    nlp(self.pre_proc(long_question)))
-                example = CoqaExample(
-                    qas_id=_datum['id'] + ' ' + str(_qas['turn_id']),
-                    question_text=_qas['raw_long_question'],
-                    doc_tokens=_datum['annotated_context']['word'],
-                    orig_answer_text=_qas['raw_answer'],
-                    start_position=_qas['answer_span'][0],
-                    end_position=_qas['answer_span'][1],
-                    rational_start_position=r_start,
-                    rational_end_position=r_end,
-                    additional_answers=_qas['additional_answers'] if 'additional_answers' in _qas else None,
-                )
-                examples.append(example)
+            long_question = long_question.strip()
+            _qas['raw_long_question'] = long_question
+            _qas['annotated_long_question'] = self.process(
+                nlp(self.pre_proc(long_question)))
+            example = CoqaExample(
+                qas_id=_datum['id'] + ' ' + str(_qas['turn_id']),
+                question_text=_qas['raw_long_question'],
+                doc_tokens=_datum['annotated_context']['word'],
+                orig_answer_text=_qas['raw_answer'],
+                start_position=_qas['answer_span'][0],
+                end_position=_qas['answer_span'][1],
+                rational_start_position=r_start,
+                rational_end_position=r_end,
+                additional_answers=_qas['additional_answers'] if 'additional_answers' in _qas else None,
+            )
+            examples.append(example)
 
         return examples
 
