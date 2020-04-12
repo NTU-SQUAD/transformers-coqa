@@ -528,7 +528,7 @@ def main():
     parser.add_argument(
         "--per_gpu_eval_batch_size", default=8, type=int, help="Batch size per GPU/CPU for evaluation."
     )
-    parser.add_argument("--learning_rate", default=5e-5,
+    parser.add_argument("--learning_rate", default=3e-5,
                         type=float, help="The initial learning rate for Adam.")
     parser.add_argument(
         "--gradient_accumulation_steps",
@@ -551,7 +551,7 @@ def main():
         type=int,
         help="If > 0: set total number of training steps to perform. Override num_train_epochs.",
     )
-    parser.add_argument("--warmup_steps", default=16000,
+    parser.add_argument("--warmup_steps", default=1000,
                         type=int, help="Linear warmup over warmup_steps.")
     parser.add_argument("--history_len", default=2, type=int,
                         help="keep len of history quesiton-answers")
