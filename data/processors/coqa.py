@@ -60,8 +60,9 @@ def coqa_convert_example_to_features_init(tokenizer_for_convert):
 def coqa_convert_example_to_features(example, tokenizer, max_seq_length, doc_stride, max_query_length):
     """Loads a data file into a list of `InputBatch`s."""
     features = []
-
-    query_tokens = tokenizer.tokenize(example.question_text)
+    query_tokens = []
+    for qa in example.question_text:
+        query_tokens.extend(tokenizer.tokenize(qa))
 
     cls_idx = 3
     if example.orig_answer_text == 'yes':
@@ -72,7 +73,8 @@ def coqa_convert_example_to_features(example, tokenizer, max_seq_length, doc_str
         cls_idx = 2  # unknown
 
     if len(query_tokens) > max_query_length:
-        query_tokens = query_tokens[0:max_query_length]
+        # keep tail
+        query_tokens = query_tokens[-max_query_length:]
 
     tok_to_orig_index = []
     orig_to_tok_index = []
@@ -598,30 +600,30 @@ class CoqaProcessor(DataProcessor):
                 _qas['answer_span'] = self.find_span_with_gt(
                     _datum['context'], _datum['raw_context_offsets'],
                     input_text)
-            long_question = ''
+
+            long_questions = []
             for j in range(i - history_len, i + 1):
+                long_question = ''
                 if j < 0:
                     continue
-                long_question += (' <Q> ' if add_qa_tag else
-                                  ' ') + datum['questions'][j]['input_text']
-                if j < i:
-                    long_question += (' <A> ' if add_qa_tag else
-                                      ' ') + datum['answers'][j]['input_text']
 
-            long_question = long_question.strip()
-            _qas['raw_long_question'] = long_question
-            _qas['annotated_long_question'] = self.process(
-                nlp(self.pre_proc(long_question)))
+                long_question += (' <Q> ' if add_qa_tag else ' ') + datum['questions'][j]['input_text']
+                if j < i:
+                    long_question += (' <A> ' if add_qa_tag else ' ') + datum['answers'][j]['input_text']
+
+                long_question = long_question.strip()
+                long_questions.append(long_question)
+
             example = CoqaExample(
                 qas_id=_datum['id'] + ' ' + str(_qas['turn_id']),
-                question_text=_qas['raw_long_question'],
+                question_text=long_questions,
                 doc_tokens=_datum['annotated_context']['word'],
                 orig_answer_text=_qas['raw_answer'],
                 start_position=_qas['answer_span'][0],
                 end_position=_qas['answer_span'][1],
                 rational_start_position=r_start,
                 rational_end_position=r_end,
-                additional_answers=_qas['additional_answers'] if 'additional_answers' in _qas else None,
+                additional_answers=_qas['additional_answers'],
             )
             examples.append(example)
 
