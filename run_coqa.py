@@ -357,10 +357,10 @@ def load_and_cache_examples(args, tokenizer, evaluate=False, output_examples=Fal
             processor = CoqaProcessor()
             if evaluate:
                 examples = processor.get_examples(args.data_dir, args.history_len, args.qa_tag,
-                                                  filename=args.predict_file)
+                                                  filename=args.predict_file,threads=args.threads)
             else:
                 examples = processor.get_examples(args.data_dir, args.history_len, args.qa_tag,
-                                                  filename=args.train_file)
+                                                  filename=args.train_file,threads=args.threads)
 
         features, dataset = coqa_convert_examples_to_features(
             examples=examples,
