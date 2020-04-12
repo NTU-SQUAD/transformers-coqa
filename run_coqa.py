@@ -709,13 +709,12 @@ def main():
             model.to(args.device)
 
             # Evaluate
-            evaluate(args, model, tokenizer, prefix=global_step)
-            # result = evaluate(args, model, tokenizer, prefix=global_step)
-            #
-            # result = dict((k + ("_{}".format(global_step) if global_step else ""), v) for k, v in result.items())
-            # results.update(result)
+            result = evaluate(args, model, tokenizer, prefix=global_step)
 
-    # logger.info("Results: {}".format(results))
+            result = dict((k + ("_{}".format(global_step) if global_step else ""), v) for k, v in result.items())
+            results.update(result)
+
+    logger.info("Results: {}".format(results))
 
     return results
 
