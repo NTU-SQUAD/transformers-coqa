@@ -20,16 +20,19 @@ from collections import OrderedDict
 from transformers import (
     PretrainedConfig,
     AutoConfig,
-    AlbertConfig
+    AlbertConfig,
+    BertConfig
 )
 
-from modeling_albert import AlbertForConversationalQuestionAnswering
+from model.modeling_albert import AlbertForConversationalQuestionAnswering
+from model.modeling_bert import BertForConversationalQuestionAnswering
 
 logger = logging.getLogger(__name__)
 
 MODEL_FOR_CONVERSATIONAL_QUESTION_ANSWERING_MAPPING = OrderedDict(
     [
         (AlbertConfig, AlbertForConversationalQuestionAnswering),
+        (BertConfig, BertForConversationalQuestionAnswering),
     ]
 )
 

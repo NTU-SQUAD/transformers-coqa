@@ -1,32 +1,11 @@
-from transformers import AlbertModel, AlbertPreTrainedModel
-import torch.nn as nn
+from transformers import BertModel, BertPreTrainedModel
 import torch.nn.functional as F
 from torch.nn import CrossEntropyLoss
 import torch
+from .Layers import Multi_linear_layer
 
-class Multi_linear_layer(nn.Module):
-    def __init__(self,
-                 n_layers,
-                 input_size,
-                 hidden_size,
-                 output_size,
-                 activation=None):
-        super(Multi_linear_layer, self).__init__()
-        self.linears = nn.ModuleList()
-        self.linears.append(nn.Linear(input_size, hidden_size))
-        for _ in range(1, n_layers - 1):
-            self.linears.append(nn.Linear(hidden_size, hidden_size))
-        self.linears.append(nn.Linear(hidden_size, output_size))
-        self.activation = getattr(F, activation)
 
-    def forward(self, x):
-        for linear in self.linears[:-1]:
-            x = self.activation(linear(x))
-        linear = self.linears[-1]
-        x = linear(x)
-        return x
-
-class AlbertForConversationalQuestionAnswering(AlbertPreTrainedModel):
+class BertForConversationalQuestionAnswering(BertPreTrainedModel):
     def __init__(
             self,
             config,
@@ -36,9 +15,9 @@ class AlbertForConversationalQuestionAnswering(AlbertPreTrainedModel):
             activation='relu',
             beta=100,
     ):
-        super(AlbertForConversationalQuestionAnswering, self).__init__(config)
+        super(BertForConversationalQuestionAnswering, self).__init__(config)
         self.output_attentions = output_attentions
-        self.albert = AlbertModel(config)
+        self.albert = BertModel(config)
         hidden_size = config.hidden_size
         self.rational_l = Multi_linear_layer(n_layers, hidden_size,
                                              hidden_size, 1, activation)

@@ -39,7 +39,7 @@ from transformers import (
 )
 
 
-from modeling_auto import MODEL_FOR_CONVERSATIONAL_QUESTION_ANSWERING_MAPPING, \
+from model.modeling_auto import MODEL_FOR_CONVERSATIONAL_QUESTION_ANSWERING_MAPPING, \
     AutoModelForConversationalQuestionAnswering
 from data.processors.coqa import CoqaProcessor, CoqaResult, coqa_convert_examples_to_features
 from data.metrics.coqa_metrics import compute_predictions_logits, coqa_evaluate
