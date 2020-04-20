@@ -72,14 +72,6 @@ class RobertaForConversationalQuestionAnswering(BertPreTrainedModel):
         start_logits, end_logits = start_logits.squeeze(
             -1), end_logits.squeeze(-1)
 
-        segment_mask = token_type_ids.type(final_hidden.dtype)
-
-        rational_logits = rational_logits.squeeze(-1) * segment_mask
-
-        start_logits = start_logits * rational_logits
-
-        end_logits = end_logits * rational_logits
-
         unk_logits = self.unk_l(pooled_output)
 
         attention = self.attention_l(final_hidden).squeeze(-1)
@@ -131,7 +123,6 @@ class RobertaForConversationalQuestionAnswering(BertPreTrainedModel):
                             - (1 - alpha) * (rational_logits**gamma) * (1 - rational_mask) * \
                             torch.log(1 - rational_logits + 1e-7)
 
-            rational_loss = (rational_loss * segment_mask).sum() / segment_mask.sum()
 
             assert not torch.isnan(rational_loss)
 
