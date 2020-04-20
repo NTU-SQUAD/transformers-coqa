@@ -21,11 +21,13 @@ from transformers import (
     PretrainedConfig,
     AutoConfig,
     AlbertConfig,
-    BertConfig
+    BertConfig,
+    RobertaConfig
 )
 
 from model.modeling_albert import AlbertForConversationalQuestionAnswering
 from model.modeling_bert import BertForConversationalQuestionAnswering
+from model.modeling_roberta import RobertaForConversationalQuestionAnswering
 
 logger = logging.getLogger(__name__)
 
@@ -33,6 +35,7 @@ MODEL_FOR_CONVERSATIONAL_QUESTION_ANSWERING_MAPPING = OrderedDict(
     [
         (AlbertConfig, AlbertForConversationalQuestionAnswering),
         (BertConfig, BertForConversationalQuestionAnswering),
+        (RobertaConfig, RobertaForConversationalQuestionAnswering),
     ]
 )
 
