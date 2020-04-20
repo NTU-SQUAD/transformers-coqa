@@ -1,11 +1,11 @@
-from transformers import BertModel, BertPreTrainedModel
+from transformers import RobertaModel, BertPreTrainedModel
 import torch.nn.functional as F
 from torch.nn import CrossEntropyLoss
 import torch
 from .Layers import Multi_linear_layer
 
 
-class BertForConversationalQuestionAnswering(BertPreTrainedModel):
+class RobertaForConversationalQuestionAnswering(BertPreTrainedModel):
     def __init__(
             self,
             config,
@@ -15,9 +15,9 @@ class BertForConversationalQuestionAnswering(BertPreTrainedModel):
             activation='relu',
             beta=100,
     ):
-        super(BertForConversationalQuestionAnswering, self).__init__(config)
+        super(RobertaForConversationalQuestionAnswering, self).__init__(config)
         self.output_attentions = output_attentions
-        self.bert = BertModel(config)
+        self.roberta = RobertaModel(config)
         hidden_size = config.hidden_size
         self.rational_l = Multi_linear_layer(n_layers, hidden_size,
                                              hidden_size, 1, activation)
@@ -45,7 +45,7 @@ class BertForConversationalQuestionAnswering(BertPreTrainedModel):
             head_mask=None,
     ):
 
-        outputs = self.bert(
+        outputs = self.roberta(
             input_ids,
             token_type_ids=token_type_ids,
             attention_mask=attention_mask,
