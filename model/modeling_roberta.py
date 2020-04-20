@@ -1,4 +1,4 @@
-from transformers import RobertaModel, BertPreTrainedModel
+from transformers import RobertaModel, BertPreTrainedModel, RobertaConfig, ROBERTA_PRETRAINED_MODEL_ARCHIVE_MAP
 import torch.nn.functional as F
 from torch.nn import CrossEntropyLoss
 import torch
@@ -6,6 +6,10 @@ from .Layers import Multi_linear_layer
 
 
 class RobertaForConversationalQuestionAnswering(BertPreTrainedModel):
+    config_class = RobertaConfig
+    pretrained_model_archive_map = ROBERTA_PRETRAINED_MODEL_ARCHIVE_MAP
+    base_model_prefix = "roberta"
+
     def __init__(
             self,
             config,
