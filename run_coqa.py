@@ -75,8 +75,8 @@ def to_list(tensor):
 
 def train(args, train_dataset, model, tokenizer):
     # add adversarial training
-    # pgd = PGD(model)
-    # K = 3
+    pgd = PGD(model)
+    K = 3
 
     """ Train the model """
     if args.local_rank in [-1, 0]:
@@ -229,26 +229,20 @@ def train(args, train_dataset, model, tokenizer):
                 loss.backward()
 
             # adversarial training
-            # pgd.backup_grad()
-            # for t in range(K):
-            #     pgd.attack(is_first_attack=(t == 0))
-            #     if t != K - 1:
-            #         model.zero_grad()
-            #     else:
-            #         pgd.restore_grad()
-            #     loss_adv = model(**inputs)
-            #     loss_adv.backward()
-            # pgd.restore()
+            if args.adversarial:
+                pgd.backup_grad()
+                for t in range(K):
+                    pgd.attack(is_first_attack=(t == 0))
+                    if t != K - 1:
+                        model.zero_grad()
+                    else:
+                        pgd.restore_grad()
+                    loss_adv = model(**inputs)
+                    loss_adv.backward()
+                pgd.restore()
 
             tr_loss += loss.item()
             if (step + 1) % args.gradient_accumulation_steps == 0:
-                # if args.fp16:
-                #     torch.nn.utils.clip_grad_norm_(
-                #         amp.master_params(optimizer), args.max_grad_norm)
-                # else:
-                #     torch.nn.utils.clip_grad_norm_(
-                #         model.parameters(), args.max_grad_norm)
-
                 optimizer.step()
                 scheduler.step()  # Update learning rate schedule
                 model.zero_grad()
@@ -257,7 +251,8 @@ def train(args, train_dataset, model, tokenizer):
                 # Log metrics
                 if args.local_rank in [-1, 0] and args.logging_steps > 0 and global_step % args.logging_steps == 0:
                     # Only evaluate when single GPU otherwise metrics may not average well
-                    if args.local_rank == -1 and args.evaluate_during_training and global_step % (args.logging_steps*20) == 0:
+                    # TODO: add arg to set evaluate steps
+                    if args.local_rank == -1 and args.evaluate_during_training and global_step % (args.logging_steps*10) == 0:
                         results = evaluate(args, model, tokenizer)
                         for key, value in results.items():
                             tb_writer.add_scalar("eval_{}".format(key), value, global_step)
@@ -539,6 +534,7 @@ def main():
     parser.add_argument(
         "--do_lower_case", action="store_true", help="Set this flag if you are using an uncased model."
     )
+    parser.add_argument("--adversarial", action="store_true", help="Whether do adversarial training.")
 
     parser.add_argument("--per_gpu_train_batch_size", default=8,
                         type=int, help="Batch size per GPU/CPU for training.")
