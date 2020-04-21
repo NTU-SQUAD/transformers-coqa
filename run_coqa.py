@@ -16,6 +16,7 @@
 """ Finetuning the library models for question-answering on Coqa (DistilBERT, Bert, XLM, XLNet)."""
 
 import argparse
+import collections
 import glob
 import json
 import logging
@@ -37,7 +38,6 @@ from transformers import (
     AutoTokenizer,
     get_linear_schedule_with_warmup,
 )
-
 
 from model.modeling_auto import MODEL_FOR_CONVERSATIONAL_QUESTION_ANSWERING_MAPPING, \
     AutoModelForConversationalQuestionAnswering
@@ -91,7 +91,7 @@ def train(args, train_dataset, model, tokenizer):
     if args.max_steps > 0:
         t_total = args.max_steps
         args.num_train_epochs = args.max_steps // (
-            len(train_dataloader) // args.gradient_accumulation_steps) + 1
+                len(train_dataloader) // args.gradient_accumulation_steps) + 1
     else:
         t_total = len(
             train_dataloader) // args.gradient_accumulation_steps * args.num_train_epochs
@@ -172,7 +172,7 @@ def train(args, train_dataset, model, tokenizer):
             epochs_trained = global_step // (len(train_dataloader) //
                                              args.gradient_accumulation_steps)
             steps_trained_in_current_epoch = global_step % (
-                len(train_dataloader) // args.gradient_accumulation_steps)
+                    len(train_dataloader) // args.gradient_accumulation_steps)
 
             logger.info(
                 "  Continuing training from checkpoint, will skip to saved global_step")
@@ -257,15 +257,14 @@ def train(args, train_dataset, model, tokenizer):
                 # Log metrics
                 if args.local_rank in [-1, 0] and args.logging_steps > 0 and global_step % args.logging_steps == 0:
                     # Only evaluate when single GPU otherwise metrics may not average well
-                    if args.local_rank == -1 and args.evaluate_during_training:
+                    if args.local_rank == -1 and args.evaluate_during_training and global_step % (args.logging_steps*20) == 0:
                         results = evaluate(args, model, tokenizer)
                         for key, value in results.items():
-                            tb_writer.add_scalar(
-                                "eval_{}".format(key), value, global_step)
+                            tb_writer.add_scalar("eval_{}".format(key), value, global_step)
                     tb_writer.add_scalar("lr", scheduler.get_lr()[0], global_step)
                     tb_writer.add_scalar("loss", (tr_loss - logging_loss) / args.logging_steps, global_step)
                     logger.info('Step: {}\tLearning rate: {}\tLoss: {}\t'.format(global_step, scheduler.get_lr()[0], (
-                                tr_loss - logging_loss) / args.logging_steps))
+                            tr_loss - logging_loss) / args.logging_steps))
                     logging_loss = tr_loss
 
                 # Save model checkpoint
@@ -375,9 +374,10 @@ def evaluate(args, model, tokenizer, prefix=""):
                                              args.do_lower_case, output_prediction_file,
                                              output_nbest_file, args.verbose_logging, tokenizer)
 
-    results = coqa_evaluate(os.path.join(args.data_dir, args.predict_file), output_prediction_file)
-    logger.info(json.dumps(results))
-    return results
+    row_results = coqa_evaluate(os.path.join(args.data_dir, args.predict_file), output_prediction_file)
+    logger.info(json.dumps(row_results))
+    results = collections.OrderedDict([("em", row_results['overall']['em']), ("f1", row_results['overall']['f1'])])
+    return results, row_results
 
 
 def load_and_cache_examples(args, tokenizer, evaluate=False, output_examples=False):
@@ -415,10 +415,10 @@ def load_and_cache_examples(args, tokenizer, evaluate=False, output_examples=Fal
             processor = CoqaProcessor()
             if evaluate:
                 examples = processor.get_examples(args.data_dir, args.history_len, args.qa_tag,
-                                                  filename=args.predict_file,threads=args.threads)
+                                                  filename=args.predict_file, threads=args.threads)
             else:
                 examples = processor.get_examples(args.data_dir, args.history_len, args.qa_tag,
-                                                  filename=args.train_file,threads=args.threads)
+                                                  filename=args.train_file, threads=args.threads)
 
         features, dataset = coqa_convert_examples_to_features(
             examples=examples,
@@ -462,7 +462,7 @@ def main():
         type=str,
         required=True,
         help="Path to pre-trained model or shortcut name selected in the list: " +
-        ", ".join(ALL_MODELS),
+             ", ".join(ALL_MODELS),
     )
     parser.add_argument(
         "--output_dir",
@@ -800,7 +800,7 @@ def main():
             model.to(args.device)
 
             # Evaluate
-            result = evaluate(args, model, tokenizer, prefix=global_step)
+            _, result = evaluate(args, model, tokenizer, prefix=global_step)
 
             result = dict((k + ("_{}".format(global_step) if global_step else ""), v)
                           for k, v in result.items())
