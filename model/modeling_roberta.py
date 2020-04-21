@@ -45,13 +45,13 @@ class RobertaForConversationalQuestionAnswering(BertPreTrainedModel):
             start_positions=None,
             end_positions=None,
             rational_mask=None,
-            cls_idx = None,
+            cls_idx=None,
             head_mask=None,
     ):
 
         outputs = self.roberta(
             input_ids,
-            token_type_ids=token_type_ids,
+            token_type_ids=None,
             attention_mask=attention_mask,
             head_mask=head_mask,
         )
@@ -71,7 +71,13 @@ class RobertaForConversationalQuestionAnswering(BertPreTrainedModel):
 
         start_logits, end_logits = start_logits.squeeze(-1), end_logits.squeeze(-1)
 
-        rational_logits = rational_logits.squeeze(-1)
+        segment_mask = token_type_ids.type(final_hidden.dtype)
+
+        rational_logits = rational_logits.squeeze(-1) * segment_mask
+
+        start_logits = start_logits * rational_logits
+
+        end_logits = end_logits * rational_logits
 
         unk_logits = self.unk_l(pooled_output)
 
@@ -81,8 +87,7 @@ class RobertaForConversationalQuestionAnswering(BertPreTrainedModel):
 
         attention = F.softmax(attention, dim=-1)
 
-        attention_pooled_output = (attention.unsqueeze(-1) *
-                                   final_hidden).sum(dim=-2)
+        attention_pooled_output = (attention.unsqueeze(-1) * final_hidden).sum(dim=-2)
 
         yn_logits = self.yn_l(attention_pooled_output)
 
@@ -120,9 +125,12 @@ class RobertaForConversationalQuestionAnswering(BertPreTrainedModel):
             gamma = 2.
             rational_mask = rational_mask.type(final_hidden.dtype)
 
-            rational_loss = -alpha * ((1 - rational_logits)**gamma) * rational_mask * torch.log(rational_logits + 1e-7) \
-                            - (1 - alpha) * (rational_logits**gamma) * (1 - rational_mask) * \
+            rational_loss = -alpha * ((1 - rational_logits) ** gamma) * rational_mask * torch.log(
+                rational_logits + 1e-7) \
+                            - (1 - alpha) * (rational_logits ** gamma) * (1 - rational_mask) * \
                             torch.log(1 - rational_logits + 1e-7)
+
+            rational_loss = (rational_loss * segment_mask).sum() / segment_mask.sum()
 
             assert not torch.isnan(rational_loss)
 
