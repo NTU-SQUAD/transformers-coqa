@@ -43,6 +43,7 @@ from model.modeling_auto import MODEL_FOR_CONVERSATIONAL_QUESTION_ANSWERING_MAPP
     AutoModelForConversationalQuestionAnswering
 from data.processors.coqa import CoqaProcessor, CoqaResult, coqa_convert_examples_to_features
 from data.metrics.coqa_metrics import compute_predictions_logits, coqa_evaluate
+from utils.adversarial import PGD
 
 try:
     from torch.utils.tensorboard import SummaryWriter
@@ -73,6 +74,10 @@ def to_list(tensor):
 
 
 def train(args, train_dataset, model, tokenizer):
+    # add adversarial training
+    # pgd = PGD(model)
+    # K = 3
+
     """ Train the model """
     if args.local_rank in [-1, 0]:
         tb_writer = SummaryWriter()
@@ -210,9 +215,6 @@ def train(args, train_dataset, model, tokenizer):
                 "cls_idx": batch[6],
             }
 
-            # if args.model_type in ["xlm", "roberta", "distilbert", "camembert"]:
-            #     del inputs["token_type_ids"]
-
             loss = model(**inputs)
 
             if args.n_gpu > 1:
@@ -226,14 +228,26 @@ def train(args, train_dataset, model, tokenizer):
             else:
                 loss.backward()
 
+            # adversarial training
+            # pgd.backup_grad()
+            # for t in range(K):
+            #     pgd.attack(is_first_attack=(t == 0))
+            #     if t != K - 1:
+            #         model.zero_grad()
+            #     else:
+            #         pgd.restore_grad()
+            #     loss_adv = model(**inputs)
+            #     loss_adv.backward()
+            # pgd.restore()
+
             tr_loss += loss.item()
             if (step + 1) % args.gradient_accumulation_steps == 0:
-                # if args.fp16:
-                #     torch.nn.utils.clip_grad_norm_(
-                #         amp.master_params(optimizer), args.max_grad_norm)
-                # else:
-                #     torch.nn.utils.clip_grad_norm_(
-                #         model.parameters(), args.max_grad_norm)
+                if args.fp16:
+                    torch.nn.utils.clip_grad_norm_(
+                        amp.master_params(optimizer), args.max_grad_norm)
+                else:
+                    torch.nn.utils.clip_grad_norm_(
+                        model.parameters(), args.max_grad_norm)
 
                 optimizer.step()
                 scheduler.step()  # Update learning rate schedule
@@ -243,11 +257,11 @@ def train(args, train_dataset, model, tokenizer):
                 # Log metrics
                 if args.local_rank in [-1, 0] and args.logging_steps > 0 and global_step % args.logging_steps == 0:
                     # Only evaluate when single GPU otherwise metrics may not average well
-                    # if args.local_rank == -1 and args.evaluate_during_training:
-                    #     results = evaluate(args, model, tokenizer)
-                    #     for key, value in results.items():
-                    #         tb_writer.add_scalar(
-                    #             "eval_{}".format(key), value, global_step)
+                    if args.local_rank == -1 and args.evaluate_during_training:
+                        results = evaluate(args, model, tokenizer)
+                        for key, value in results.items():
+                            tb_writer.add_scalar(
+                                "eval_{}".format(key), value, global_step)
                     tb_writer.add_scalar("lr", scheduler.get_lr()[0], global_step)
                     tb_writer.add_scalar("loss", (tr_loss - logging_loss) / args.logging_steps, global_step)
                     logger.info('Step: {}\tLearning rate: {}\tLoss: {}\t'.format(global_step, scheduler.get_lr()[0], (
@@ -326,9 +340,6 @@ def evaluate(args, model, tokenizer, prefix=""):
                 "token_type_ids": batch[1],
                 "attention_mask": batch[2],
             }
-
-            # if args.model_type in ["xlm", "roberta", "distilbert", "camembert"]:
-            #     del inputs["token_type_ids"]
 
             example_indices = batch[3]
             outputs = model(**inputs)
