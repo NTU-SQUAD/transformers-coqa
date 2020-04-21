@@ -252,8 +252,8 @@ def train(args, train_dataset, model, tokenizer):
                 if args.local_rank in [-1, 0] and args.logging_steps > 0 and global_step % args.logging_steps == 0:
                     # Only evaluate when single GPU otherwise metrics may not average well
                     # TODO: add arg to set evaluate steps
-                    if args.local_rank == -1 and args.evaluate_during_training and global_step % (args.logging_steps*10) == 0:
-                        results = evaluate(args, model, tokenizer)
+                    if args.local_rank == -1 and args.evaluate_during_training and global_step % (args.logging_steps * 10) == 0:
+                        results, _ = evaluate(args, model, tokenizer)
                         for key, value in results.items():
                             tb_writer.add_scalar("eval_{}".format(key), value, global_step)
                     tb_writer.add_scalar("lr", scheduler.get_lr()[0], global_step)
@@ -370,7 +370,6 @@ def evaluate(args, model, tokenizer, prefix=""):
                                              output_nbest_file, args.verbose_logging, tokenizer)
 
     row_results = coqa_evaluate(os.path.join(args.data_dir, args.predict_file), output_prediction_file)
-    logger.info(json.dumps(row_results))
     results = collections.OrderedDict([("em", row_results['overall']['em']), ("f1", row_results['overall']['f1'])])
     return results, row_results
 
