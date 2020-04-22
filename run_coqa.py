@@ -205,6 +205,13 @@ def train(args, train_dataset, model, tokenizer):
             model.train()
             batch = tuple(t.to(args.device) for t in batch)
 
+            # input_ids: input token id
+            # token_type_ids: segment id, 0 for questions and 1 for article
+            # attention_mask: 1 for real tokens, 0 for paddings
+            # start_postions: answer span begin at this position
+            # end_positions: answer span end at this position
+            # rational_mask: set rational answer span from article 1 and others 0
+            # cls_idx: yes 0, no 1, unknown 2, span 3
             inputs = {
                 "input_ids": batch[0],
                 "token_type_ids": batch[1],
