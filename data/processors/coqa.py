@@ -8,6 +8,7 @@ import string
 from collections import Counter
 from functools import partial
 from multiprocessing import Pool, cpu_count
+import numpy as np
 
 import spacy
 import torch
@@ -222,6 +223,19 @@ def coqa_convert_example_to_features(example, tokenizer, max_seq_length, doc_str
         else:
             start_position = 0
             end_position = 0
+        cls_index = input_ids.index(tokenizer.cls_token_id)
+        p_mask = np.array(segment_ids)
+        p_mask = np.minimum(p_mask, 1)
+        if tokenizer.padding_side == "right":
+            # Limit positive values to one
+            p_mask = 1 - p_mask
+        p_mask[np.where(np.array(input_ids) == tokenizer.sep_token_id)[0]] = 1
+        p_mask[cls_index] = 0
+        span_is_impossible = cls_idx == 2
+        paragraph_len = min(
+            len(all_doc_tokens) - doc_span_index * doc_stride,
+            max_tokens_for_doc
+        )
 
         features.append(
             CoqaFeatures(example_index=0,
@@ -237,7 +251,13 @@ def coqa_convert_example_to_features(example, tokenizer, max_seq_length, doc_str
                          start_position=start_position,
                          end_position=end_position,
                          cls_idx=slice_cls_idx,
-                         rational_mask=rational_mask))
+                         rational_mask=rational_mask,
+                         p_mask=p_mask.tolist(),
+                         cls_index_pos=cls_index,
+                         span_is_impossible =span_is_impossible,
+                         paragraph_len=paragraph_len
+                         ),
+        )
 
     return features
 
@@ -278,17 +298,23 @@ def coqa_convert_examples_to_features(examples, tokenizer, max_seq_length, doc_s
     all_input_ids = torch.tensor([f.input_ids for f in features], dtype=torch.long)
     all_input_mask = torch.tensor([f.input_mask for f in features], dtype=torch.long)
     all_segment_ids = torch.tensor([f.segment_ids for f in features], dtype=torch.long)
+    all_cls_index_pos = torch.tensor([f.cls_index_pos for f in features], dtype=torch.long)
+    all_p_mask = torch.tensor([f.p_mask for f in features], dtype=torch.float)
+    all_is_impossible = torch.tensor([f.span_is_impossible for f in features], dtype=torch.float)
     if not is_training:
         all_example_index = torch.arange(all_input_ids.size(0),
                                          dtype=torch.long)
-        dataset = TensorDataset(all_input_ids, all_segment_ids, all_input_mask, all_example_index)
+        dataset = TensorDataset(all_input_ids, all_segment_ids, all_input_mask, all_example_index,
+                                all_cls_index_pos,all_p_mask)
     else:
         all_start_positions = torch.tensor([f.start_position for f in features], dtype=torch.long)
         all_end_positions = torch.tensor([f.end_position for f in features], dtype=torch.long)
         all_rational_mask = torch.tensor([f.rational_mask for f in features], dtype=torch.long)
         all_cls_idx = torch.tensor([f.cls_idx for f in features], dtype=torch.long)
         dataset = TensorDataset(all_input_ids, all_segment_ids, all_input_mask, all_start_positions,
-                                all_end_positions, all_rational_mask, all_cls_idx)
+                                all_end_positions, all_rational_mask, all_cls_idx,
+                                all_p_mask,all_cls_index_pos,all_is_impossible
+                                )
 
     return features, dataset
 
@@ -308,7 +334,11 @@ class CoqaFeatures(object):
                  start_position=None,
                  end_position=None,
                  cls_idx=None,
-                 rational_mask=None):
+                 rational_mask=None,
+                 p_mask = None,
+                 cls_index_pos = None,
+                 span_is_impossible= None,
+                 paragraph_len= None):
         self.unique_id = unique_id
         self.example_index = example_index
         self.doc_span_index = doc_span_index
@@ -322,6 +352,10 @@ class CoqaFeatures(object):
         self.end_position = end_position
         self.cls_idx = cls_idx
         self.rational_mask = rational_mask
+        self.p_mask = p_mask
+        self.cls_index_pos = cls_index_pos
+        self.span_is_impossible = span_is_impossible
+        self.paragraph_len = paragraph_len
 
 
 class CoqaExample(object):
@@ -520,13 +554,11 @@ class CoqaProcessor(DataProcessor):
             examples = list(tqdm(
                 p.imap(annotate_, input_data),
                 total=len(input_data),
-                desc="convert coqa examples to features",
+                desc="extract examples from raw data",
             ))
-        # print(len(examples))
         examples = [item for sublist in examples for item in sublist]
-        # print(len(examples))
+        examples.sort(key=lambda x: x.qas_id)
         return examples
-        # return self._create_examples(input_data, history_len, add_qa_tag)
 
     def _create_examples(self, input_data, history_len, add_qa_tag):
         nlp = spacy.load('en_core_web_sm', parser=False)
@@ -640,10 +672,14 @@ class CoqaResult(object):
         end_logits: The logits corresponding to the end of the answer
     """
 
-    def __init__(self, unique_id, start_logits, end_logits, yes_logits, no_logits, unk_logits):
+    def __init__(self, unique_id, start_logits, end_logits, yes_logits=None, no_logits=None, unk_logits=None,
+                 start_top_index=None,end_top_index=None,cls_logits=None):
         self.unique_id = unique_id
         self.start_logits = start_logits
         self.end_logits = end_logits
         self.yes_logits = yes_logits
         self.no_logits = no_logits
         self.unk_logits = unk_logits
+        self.start_top_index = start_top_index,
+        self.end_top_index = end_top_index,
+        self.cls_logits = cls_logits,

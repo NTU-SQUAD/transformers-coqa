@@ -42,7 +42,7 @@ from transformers import (
 from model.modeling_auto import MODEL_FOR_CONVERSATIONAL_QUESTION_ANSWERING_MAPPING, \
     AutoModelForConversationalQuestionAnswering
 from data.processors.coqa import CoqaProcessor, CoqaResult, coqa_convert_examples_to_features
-from data.metrics.coqa_metrics import compute_predictions_logits, coqa_evaluate
+from data.metrics.coqa_metrics import compute_predictions_logits, coqa_evaluate, compute_predictions_log_probs
 from utils.adversarial import PGD
 
 try:
@@ -213,6 +213,9 @@ def train(args, train_dataset, model, tokenizer):
                 "end_positions": batch[4],
                 "rational_mask": batch[5],
                 "cls_idx": batch[6],
+                "p_mask" :  batch[7],
+                "cls_index_pos": batch[8],
+                "span_is_impossible": batch[9]
             }
 
             loss = model(**inputs)
@@ -329,11 +332,13 @@ def evaluate(args, model, tokenizer, prefix=""):
         batch = tuple(t.to(args.device) for t in batch)
 
         with torch.no_grad():
+
             inputs = {
                 "input_ids": batch[0],
                 "token_type_ids": batch[1],
                 "attention_mask": batch[2],
             }
+            inputs.update({"cls_index_pos": batch[4], "p_mask": batch[5]})
 
             example_indices = batch[3]
             outputs = model(**inputs)
@@ -343,14 +348,29 @@ def evaluate(args, model, tokenizer, prefix=""):
             unique_id = int(eval_feature.unique_id)
 
             output = [to_list(output[i]) for output in outputs]
-            start_logits, end_logits, yes_logits, no_logits, unk_logits = output
+            if len(output) >= 5:
+                start_logits = output[0]
+                start_top_index = output[1]
+                end_logits = output[2]
+                end_top_index = output[3]
+                cls_logits = output[4]
 
-            result = CoqaResult(unique_id=unique_id,
-                                start_logits=start_logits,
-                                end_logits=end_logits,
-                                yes_logits=yes_logits,
-                                no_logits=no_logits,
-                                unk_logits=unk_logits)
+                result = CoqaResult(
+                    unique_id,
+                    start_logits,
+                    end_logits,
+                    start_top_index=start_top_index,
+                    end_top_index=end_top_index,
+                    cls_logits=cls_logits,
+                )
+            # start_logits, end_logits, yes_logits, no_logits, unk_logits = output
+
+            # result = CoqaResult(unique_id=unique_id,
+            #                     start_logits=start_logits,
+            #                     end_logits=end_logits,
+            #                     yes_logits=yes_logits,
+            #                     no_logits=no_logits,
+            #                     unk_logits=unk_logits)
 
             all_results.append(result)
 
@@ -364,10 +384,25 @@ def evaluate(args, model, tokenizer, prefix=""):
     output_nbest_file = os.path.join(
         args.output_dir, "nbest_predictions_{}.json".format(prefix))
 
-    predictions = compute_predictions_logits(examples, features, all_results,
-                                             args.n_best_size, args.max_answer_length,
-                                             args.do_lower_case, output_prediction_file,
-                                             output_nbest_file, args.verbose_logging, tokenizer)
+    # predictions = compute_predictions_logits(examples, features, all_results,
+    #                                          args.n_best_size, args.max_answer_length,
+    #                                          args.do_lower_case, output_prediction_file,
+    #                                          output_nbest_file, args.verbose_logging, tokenizer)
+    predictions = compute_predictions_log_probs(
+        examples,
+        features,
+        all_results,
+        args.n_best_size,
+        args.max_answer_length,
+        output_prediction_file,
+        output_nbest_file,
+        None,
+        2,
+        2,
+        None,
+        tokenizer,
+        args.verbose_logging,
+    )
 
     row_results = coqa_evaluate(os.path.join(args.data_dir, args.predict_file), output_prediction_file)
     results = collections.OrderedDict([("em", row_results['overall']['em']), ("f1", row_results['overall']['f1'])])
