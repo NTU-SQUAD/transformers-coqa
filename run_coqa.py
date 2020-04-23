@@ -44,6 +44,7 @@ from model.modeling_auto import MODEL_FOR_CONVERSATIONAL_QUESTION_ANSWERING_MAPP
 from data.processors.coqa import CoqaProcessor, CoqaResult, coqa_convert_examples_to_features
 from data.metrics.coqa_metrics import compute_predictions_logits, coqa_evaluate
 from utils.adversarial import PGD
+from utils.tools import count_parameters
 
 try:
     from torch.utils.tensorboard import SummaryWriter
@@ -740,6 +741,9 @@ def main():
             raise ImportError(
                 "Please install apex from https://www.github.com/nvidia/apex to use fp16 training.")
 
+    # cal parameter number
+    parameter_number = count_parameters(model)
+    logger.info("Total parameter number: {}".format(parameter_number))
     # Training
     if args.do_train:
         train_dataset = load_and_cache_examples(
