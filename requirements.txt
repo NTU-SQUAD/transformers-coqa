@@ -1,0 +1,7 @@
+pytorch
+transformers
+spacy
+tqdm
+multiprocessing
+tensorboard
+tensorboardX
