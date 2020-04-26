@@ -4,11 +4,9 @@
 ```
 python 3.7
 # install packages below or just run `pip install -r requirements.txt` 
-pip install pytorch
 pip install transformers
 pip install spacy
 pip install tqdm
-pip install multiprocessing
 pip install tensorboard
 pip install tensorboardX
 
