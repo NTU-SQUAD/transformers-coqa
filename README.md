@@ -3,7 +3,7 @@
 ## Requirements
 
 ```bash
-python 3.7
+Our code is tested under python 3.7 and pytorch 1.4.1(torch== 1.4.1)
 # install packages below or just run `pip install -r requirements.txt` 
 pip install transformers
 pip install spacy
@@ -90,9 +90,38 @@ The current CoQA [leadboard](https://stanfordnlp.github.io/coqa/)
 
 ## Parameters
 
+Here we will explain some important parameters, for all trainning parameters, you can find in `run_coqa.py`
+
+| Param name                  | Default value        | Details                                                      |
+| --------------------------- | -------------------- | ------------------------------------------------------------ |
+| model_type                  | None                 | Type of models,such as bert,albert,roberta.                  |
+| model_name_or_path          | None                 | Path to pre-trained model or model name listed above.        |
+| output_dir                  | None                 | The output directory where the model checkpoints and predictions will be written. |
+| data_dir                    | None                 | The directory where training and evaluate data (json files) are placed, if  is None, the root directory will be taken. |
+| train_file                  | coqa-train-v1.0.json | The input training file.                                     |
+| predict_file                | coqa-dev-v1.0.json   | The input evaluation file.                                   |
+| max_seq_length              | 512                  | The maximum total input sequence length after WordPiece tokenization. |
+| doc_stride                  | 128                  | When splitting up a long document into chunks, how much stride to take between chunks. |
+| max_query_length            | 64                   | The maximum number of tokens for the question. Questions longer than this will be truncated to this length. |
+| do_train                    | False                | Whether to run training.                                     |
+| do_eval                     | False                | Whether to run eval on the dev set.                          |
+| evaluate_during_training    | False                | Run evaluation during training at 10times each logging step  |
+| do_lower_case               | False                | Set this flag if you are using an uncased model.             |
+| per_gpu_train_batch_size    | 8                    | Batch size per GPU/CPU for training.                         |
+| learning_rate               | 3e-5                 | The initial learning rate for Adam.                          |
+| gradient_accumulation_steps | 1                    | Number of updates steps to accumulate before performing a backward/update pass. |
+| weight_decay                | 0.01                 | Weight decay if we apply some.                               |
+| num_train_epochs            | 2                    | Total number of training epochs to perform.                  |
+| warmup_steps                | 2000                 | Linear warmup over warmup_steps.This should not be too small(such as 200), will may lead to low score in this model. |
+| history_len                 | 2                    | keep len of history quesiton-answers                         |
+| logging_steps               | 50                   | Log every X updates steps.                                   |
+| threads                     | 1                    | multiple threads for converting example to features          |
+
+
+
 ## Model explanation
 
-The following is the overview of the whole repo structure, we keep the structure similiar with the `transformers` fine-tune on `SQuAD`.
+The following is the overview of the whole repo structure, we keep the structure similiar with the `transformers` fine-tune on `SQuAD`, we use the `transformers` library to load pre-trained model and model implementation.
 
 ```bash
 ├── data
