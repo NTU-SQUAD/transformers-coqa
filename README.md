@@ -3,7 +3,7 @@
 ## Requirements
 
 ```bash
-Our code is tested under python 3.7 and pytorch 1.4.1(torch== 1.4.1)
+# Our code is tested under python 3.7 and pytorch 1.4.1(torch== 1.4.1)
 # install packages below or just run `pip install -r requirements.txt` 
 pip install transformers==2.8.0
 pip install numpy==1.16.4
@@ -13,7 +13,7 @@ pip install tensorboard==1.14.0
 pip install tensorboardX==2.0
 
 # install language model for spacy
-python -m spacy download en
+python3 -m spacy download en
 ```
 
 ## Data
@@ -70,9 +70,9 @@ The evaluation script is provided by CoQA.
 To evaluate, just run
 
 ```bash
-python evaluate.py --data-file <path_to_dev-v1.0.json> --pred-file <path_to_predictions>
+python3 evaluate.py --data-file <path_to_dev-v1.0.json> --pred-file <path_to_predictions>
 # if your trained the model using default parameters, it will be
-python evaluate.py --data-file data/coqa-dev-v1.0.json --pred-file albert-output/predictions_.json
+python3 evaluate.py --data-file data/coqa-dev-v1.0.json --pred-file albert-output/predictions_.json
 ```
 
 ## Docker
@@ -97,14 +97,14 @@ Some commom parameters:
 `adam_epsilon=1e-08, data_dir='data/', do_lower_case=True, doc_stride=128,  fp16=False, history_len=2, learning_rate=3e-05, max_answer_length=30, max_grad_norm=-1.0, max_query_length=64, max_seq_length=512,  per_gpu_eval_batch_size=8, seed=42, train_file='coqa-train-v1.0.json', warmup_steps=2000, weight_decay=0.01,num_train_epochs=2`
 
 Our result:
-| Model               | Em   | F1   | Parameters                                                   |
-| ------------------- | ---- | ---- | ------------------------------------------------------------ |
-| bert-base-uncased   | 68.5 | 78.4 | per_gpu_train_batch_size=16                                  |
-| roberta-base        | 72.2 | 81.6 | per_gpu_train_batch_size=16                                  |
-| albert-base-v2      | 71.5 | 81.0 | per_gpu_train_batch_size=8                                   |
-| albert-base-v2 + AT | 71.7 | 81.3 | per_gpu_train_batch_size=8                                   |
-| roberta-large       | 76.3 | 85.7 | per_gpu_train_batch_size=3                                   |
-| albert-xxlarge-v1   | 79.1 | 88.1 | per_gpu_train_batch_size=2, gradient_accumulation_steps=12, weight_decay=0 |
+| Model                   | Em       | F1       | Parameters                                                   |
+| ----------------------- | -------- | -------- | ------------------------------------------------------------ |
+| bert-base-uncased       | 68.5     | 78.4     | per_gpu_train_batch_size=16                                  |
+| roberta-base            | 72.2     | 81.6     | per_gpu_train_batch_size=16                                  |
+| albert-base-v2          | 71.5     | 81.0     | per_gpu_train_batch_size=8                                   |
+| **albert-base-v2 + AT** | **71.7** | **81.3** | per_gpu_train_batch_size=8                                   |
+| roberta-large           | 76.3     | 85.7     | per_gpu_train_batch_size=3                                   |
+| **albert-xxlarge-v1**   | **79.1** | **88.1** | per_gpu_train_batch_size=2, gradient_accumulation_steps=12, weight_decay=0 |
 
 The current CoQA [leadboard](https://stanfordnlp.github.io/coqa/)
 
