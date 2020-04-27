@@ -93,6 +93,24 @@ Some commom parameters:
 
 ## Parameters
 
+Here we will explain some important parameters, for all trainning parameters, you can find in `run_coqa.py`
+
+
+
+| Param name         | Default value | Details                                    |
+| ------------------ | ------------- | ------------------------------------------ |
+| model_type         | None          | Type of models,such as bert,albert,roberta |
+| model_name_or_path | None          |                                            |
+|                    |               |                                            |
+|                    |               |                                            |
+|                    |               |                                            |
+|                    |               |                                            |
+|                    |               |                                            |
+|                    |               |                                            |
+|                    |               |                                            |
+
+
+
 ## Model explanation
 
 The following is the overview of the whole repo structure, we keep the structure similiar with the `transformers` fine-tune on `SQuAD`.
