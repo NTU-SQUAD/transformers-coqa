@@ -76,6 +76,7 @@ python evaluate.py --data-file data/coqa-dev-v1.0.json --pred-file albert-output
 Some commom parameters:
 `adam_epsilon=1e-08, data_dir='data/', do_lower_case=True, doc_stride=128,  fp16=False, history_len=2, learning_rate=3e-05, max_answer_length=30, max_grad_norm=-1.0, max_query_length=64, max_seq_length=512,  per_gpu_eval_batch_size=8, seed=42, train_file='coqa-train-v1.0.json', warmup_steps=2000, weight_decay=0.01,num_train_epochs=2`
 
+Our result:
 | Model               | Em   | F1   | Parameters                                                   |
 | ------------------- | ---- | ---- | ------------------------------------------------------------ |
 | bert-base-uncased   | 68.5 | 78.4 | per_gpu_train_batch_size=16                                  |
@@ -84,6 +85,8 @@ Some commom parameters:
 | albert-base-v2 + AT | 71.7 | 81.3 | per_gpu_train_batch_size=8                                   |
 | roberta-large       | 76.3 | 85.7 | per_gpu_train_batch_size=3                                   |
 | albert-xxlarge-v1   | 79.1 | 88.1 | per_gpu_train_batch_size=2, gradient_accumulation_steps=12, weight_decay=0 |
+
+The current CoQA [leadboard](https://stanfordnlp.github.io/coqa/)
 
 ## Parameters
 
@@ -125,7 +128,7 @@ The following is the overview of the whole repo structure, we keep the structure
 │   ├── coqa-dev-v1.0.json  # CoQA Validation dataset
 │   ├── coqa-train-v1.0.json    # CoQA training dataset
 │   ├── metrics
-│   │   └── coqa_metrics.py # compute the predictions for evaluation
+│   │   └── coqa_metrics.py # Compute and save the predictions, do evaluation and get the final score
 │   └── processors
 │       ├── coqa.py # Data processing: create examples from the raw dataset, convert examples into features
 │       └── utils.py    # data Processor for sequence classification data sets.
@@ -133,7 +136,7 @@ The following is the overview of the whole repo structure, we keep the structure
 ├── LICENSE
 ├── model
 │   ├── Layers.py # Multiple LinearLayer class used in the downstream QA tasks
-│   ├── modeling_albert.py # core ALBERT model class, add architecture for the downstream QA tasks on the top of ALBERT model from transformer library. 
+│   ├── modeling_albert.py # core ALBERT model class, add architecture for the downstream QA tasks on the top of ALBERT model from transformer library.
 │   ├── modeling_auto.py # generic class that help instantiate one of the question answering model classes, As the bert like model has similiar input and output. Use this can make clean code and fast develop and test. Refer to the same class in transformers library
 │   ├── modeling_bert.py # core BERT model class, including all the architecture for the downstream QA tasks
 │   └── modeling_roberta.py  # core Roberta model class, including all the architecture for the downstream QA tasks
@@ -151,14 +154,14 @@ The following are detailed descrpition on some core scripts:
 - [run_coqa.py](run_coqa.py): This script is the main function script used for training and evaluation. It:
    1. Defines All system parameters and some training parameter (detailed parameter explanation please refer to parameter helpe in the source code)
    2. Setup CUDA, GPU, distributed training and logging, all seeds
-   3. Instantiate and initialize the model config, tokenizer and Bert-like QA model
+   3. Instantiate and initialize the corresponding model config, tokenizer and model itself
    4. Calculate the number of trainable parameters
    5. Define and execute the training and evaluation function
 - [coqa.py](data/processors/coqa.py): This script contains the functions and classes used to conduct data preprocess, it:
    1. Define the data structure of **CoqaExamples**, **CoqaFeatures** and **CoqaResult**
    2. Define the class of **CoqaProcessor**, which is used to process the raw data to get examples. It implements the methods **get_raw_context_offsets** to add word offset, **find_span_with_gt** to find the best answer span, **_create_examples** to convert single convertiation (context and QA pairs) into **CoqaExample**, **get_examples** to parallel execute the _create_examples
    3. Define the methods **coqa_convert_example_to_features** to convert **CoqaExamples** into **CoqaFeatures**, **coqa_convert_examples_to_features** to parallel execute **coqa_convert_example_to_features**
-- [modeling_albert.py](model/modeling_albert.py): This script contains the core ALBERT class and related downstream CoQA QA architecture, it:
+- [modeling_albert.py](model/modeling_albert.py): This script contains the core ALBERT class and related downstream CoQA architecture, it:
    1. import the ALBERT model from [transformer](https://github.com/huggingface/transformers) library
    2. build downstream CoQA tasks architecture on the top of last hidden state and pooler output to get the training loss for training and start, end, yes, no, unknown logits for prediction.
 
@@ -168,5 +171,4 @@ The following are detailed descrpition on some core scripts:
 2. [transformers](https://github.com/huggingface/transformers)
 3. [bert4coqa](https://github.com/adamluo1995/Bert4CoQA)
 4. [SDNet](https://github.com/microsoft/SDNet)
-
 5. [Adversarial Training](https://fyubang.com/2019/10/15/adversarial-train/)
