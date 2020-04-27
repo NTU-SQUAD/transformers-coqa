@@ -5,11 +5,12 @@
 ```bash
 Our code is tested under python 3.7 and pytorch 1.4.1(torch== 1.4.1)
 # install packages below or just run `pip install -r requirements.txt` 
-pip install transformers
-pip install spacy
-pip install tqdm
-pip install tensorboard
-pip install tensorboardX
+pip install transformers==2.8.0
+pip install numpy==1.16.4
+pip install spacy==2.2.4
+pip install tqdm==4.42.1
+pip install tensorboard==1.14.0
+pip install tensorboardX==2.0
 
 # install language model for spacy
 python -m spacy download en
@@ -17,12 +18,13 @@ python -m spacy download en
 
 ## Data
 
-`coqa-dev-v1.0.json` for training, and `coqa-dev-v1.0.json` for evaluate.
-You can get newest dataset from [CoQA](https://stanfordnlp.github.io/coqa/) 
+`coqa-train-v1.0.json` for training, and `coqa-dev-v1.0.json` for evaluate.
+You can get newest dataset from [CoQA](https://stanfordnlp.github.io/coqa/) **OR**
+Direct download [coqa-train-v1.0.json](https://nlp.stanford.edu/data/coqa/coqa-train-v1.0.json) and [coqa-dev-v1.0.json](https://nlp.stanford.edu/data/coqa/coqa-dev-v1.0.json) seperately
 
 ## Run-train
 
-1. put coqa-train-v1.0.json and coqa-dev-v1.0.json in same folder, for example in folder `data`
+1. put coqa-train-v1.0.json and coqa-dev-v1.0.json in same folder, for example in folder `data/`
 2. if you want to running the code using the default settings, just run`./run.sh`
 3. or run `run_coqa.py` with parmeters,for example add adversarial training, and evaluate process will be done after training
 
@@ -58,6 +60,8 @@ You can get newest dataset from [CoQA](https://stanfordnlp.github.io/coqa/)
    . ./run_albert_xxlarge
    . ./run_albert_at
    ```
+
+5. The estimate training and evaluation time for `albert-base` model on the CoQA task is around **6** hours on the GPU server provided to MSAI students. For the `albert_xxlarge`, `bert`, `roberta` and `roberta_large`, it is expected more time to training
 
 ## Run-evaluate
 
@@ -133,8 +137,6 @@ Here we will explain some important parameters, for all trainning parameters, yo
 | logging_steps               | 50                   | Log every X updates steps.                                   |
 | threads                     | 1                    | multiple threads for converting example to features          |
 
-
-
 ## Model explanation
 
 The following is the overview of the whole repo structure, we keep the structure similiar with the `transformers` fine-tune on `SQuAD`, we use the `transformers` library to load pre-trained model and model implementation.
@@ -142,20 +144,20 @@ The following is the overview of the whole repo structure, we keep the structure
 ```bash
 ├── data
 │   ├── coqa-dev-v1.0.json  # CoQA Validation dataset
-│   ├── coqa-train-v1.0.json    # CoQA training dataset
+│   ├── coqa-train-v1.0.json # CoQA training dataset
 │   ├── metrics
 │   │   └── coqa_metrics.py # Compute and save the predictions, do evaluation and get the final score
 │   └── processors
 │       ├── coqa.py # Data processing: create examples from the raw dataset, convert examples into features
-│       └── utils.py    # data Processor for sequence classification data sets.
+│       └── utils.py # data Processor for sequence classification data sets.
 ├── evaluate.py # script used to run the evaluation only, please refer to the above Run-evaluate section
 ├── LICENSE
 ├── model
 │   ├── Layers.py # Multiple LinearLayer class used in the downstream QA tasks
-│   ├── modeling_albert.py # core ALBERT model class, add architecture for the downstream QA tasks on the top of ALBERT model from transformer library.
+│   ├── modeling_albert.py # core ALBERT model class, add architecture for the downstream QA tasks on the top of pre-trained ALBERT model from transformer library.
 │   ├── modeling_auto.py # generic class that help instantiate one of the question answering model classes, As the bert like model has similiar input and output. Use this can make clean code and fast develop and test. Refer to the same class in transformers library
 │   ├── modeling_bert.py # core BERT model class, including all the architecture for the downstream QA tasks
-│   └── modeling_roberta.py  # core Roberta model class, including all the architecture for the downstream QA tasks
+│   └── modeling_roberta.py # core Roberta model class, including all the architecture for the downstream QA tasks
 ├── README.md # This instruction you are reading now
 ├── requirements.txt # The requirements for reproducing our results
 ├── run_coqa.py # Main function script
@@ -168,18 +170,18 @@ The following is the overview of the whole repo structure, we keep the structure
 The following are detailed descrpition on some core scripts:
 
 - [run_coqa.py](run_coqa.py): This script is the main function script used for training and evaluation. It:
-   1. Defines All system parameters and some training parameter (detailed parameter explanation please refer to parameter helpe in the source code)
+   1. Defines All system parameters and some training parameter
    2. Setup CUDA, GPU, distributed training and logging, all seeds
-   3. Instantiate and initialize the corresponding model config, tokenizer and model itself
+   3. Instantiate and initialize the corresponding model config, tokenizer and pre-train model
    4. Calculate the number of trainable parameters
    5. Define and execute the training and evaluation function
 - [coqa.py](data/processors/coqa.py): This script contains the functions and classes used to conduct data preprocess, it:
-   1. Define the data structure of **CoqaExamples**, **CoqaFeatures** and **CoqaResult**
-   2. Define the class of **CoqaProcessor**, which is used to process the raw data to get examples. It implements the methods **get_raw_context_offsets** to add word offset, **find_span_with_gt** to find the best answer span, **_create_examples** to convert single convertiation (context and QA pairs) into **CoqaExample**, **get_examples** to parallel execute the _create_examples
-   3. Define the methods **coqa_convert_example_to_features** to convert **CoqaExamples** into **CoqaFeatures**, **coqa_convert_examples_to_features** to parallel execute **coqa_convert_example_to_features**
+   1. Define the data structure of `CoqaExamples`, `CoqaFeatures` and `CoqaResult`
+   2. Define the class of `CoqaProcessor`, which is used to process the raw data to get examples. It implements the methods `get_raw_context_offsets` to add word offset, `find_span_with_gt` to find the best answer span, `_create_examples` to convert single conversation (context and QAs pairs) into `CoqaExample`, `get_examples` to parallel execute the create_examples
+   3. Define the methods `coqa_convert_example_to_features` to convert `CoqaExamples` into `CoqaFeatures`, `coqa_convert_examples_to_features` to parallel execute `coqa_convert_example_to_features`
 - [modeling_albert.py](model/modeling_albert.py): This script contains the core ALBERT class and related downstream CoQA architecture, it:
-   1. import the ALBERT model from [transformer](https://github.com/huggingface/transformers) library
-   2. build downstream CoQA tasks architecture on the top of last hidden state and pooler output to get the training loss for training and start, end, yes, no, unknown logits for prediction.
+   1. Load the pre-trained ALBERT model from `transformer` library
+   2. Build downstream CoQA tasks architecture on the top of ALBERT last hidden state and pooler output to get the training loss for training and start, end, yes, no, unknown logits for prediction. This architecture is the same as shown in the presentation and report
 
 ## References
 
