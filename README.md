@@ -1,7 +1,8 @@
 # transformers-coqa
 
 ## Requirements
-```
+
+```bash
 python 3.7
 # install packages below or just run `pip install -r requirements.txt` 
 pip install transformers
@@ -17,17 +18,17 @@ python -m spacy download en
 ## Folder Structure
 
 ## Data
+
 `coqa-dev-v1.0.json` for training, and `coqa-dev-v1.0.json` for evaluate.
 You can get newest dataset from [CoQA](https://stanfordnlp.github.io/coqa/) 
 
 ## Run-train
+
 1. put coqa-train-v1.0.json and coqa-dev-v1.0.json in same folder, for example in folder `data`
-2. if you want to running the code using the default settings, just run
-    ```
-    . ./run.sh
-    ```
+2. if you want to running the code using the default settings, just run`./run.sh`
 3. or run `run_coqa.py` with parmeters,for example add adversarial training, and evaluate process will be done after training
-    ```
+
+    ```bash
     python run_coqa.py --model_type albert \
                    --model_name_or_path albert-base-v2 \
                    --do_train \
@@ -42,14 +43,17 @@ You can get newest dataset from [CoQA](https://stanfordnlp.github.io/coqa/)
                    --per_gpu_train_batch_size 8  \
                    --max_grad_norm -1 \
                    --weight_decay 0.01 \
-                   --adversarial
+                   --adversarial \
+                   --threads 8
     ```
 
 ## Run-evaluate
+
 After you get the prediction files, you can run evaluate seperately.
 The evaluation script is provided by CoQA.
 To evaluate, just run
-```
+
+```bash
 python evaluate.py --data-file <path_to_dev-v1.0.json> --pred-file <path_to_predictions>
 # if your trained the model using default parameters, it will be
 python evaluate.py --data-file data/coqa-dev-v1.0.json --pred-file albert-output/predictions_.json
@@ -58,10 +62,7 @@ python evaluate.py --data-file data/coqa-dev-v1.0.json --pred-file albert-output
 ## Results
 
 Some commom parameters:
-
 `adam_epsilon=1e-08, data_dir='data/', do_lower_case=True, doc_stride=128,  fp16=False,  , history_len=2, learning_rate=3e-05, max_answer_length=30, max_grad_norm=-1.0, max_query_length=64, max_seq_length=512,  per_gpu_eval_batch_size=8, seed=42, train_file='coqa-train-v1.0.json', warmup_steps=2000, weight_decay=0.01,num_train_epochs=2`
-
-
 
 | Model               | Em   | F1   | Parameters                                                   |
 | ------------------- | ---- | ---- | ------------------------------------------------------------ |
@@ -78,5 +79,32 @@ Some commom parameters:
 
 ## Model explanation
 
+The following is the overview of the whole repo structure
+
+```bash
+├── data
+│   ├── coqa-dev-v1.0.json  # CoQA Validation dataset
+│   ├── coqa-train-v1.0.json    # CoQA training dataset
+│   ├── metrics
+│   │   └── coqa_metrics.py # compute the predictions for evaluation
+│   └── processors
+│       ├── coqa.py # Data processing: create examples from the raw dataset, convert examples into features
+│       └── utils.py    # data converters for sequence classification data sets.
+├── evaluate.py # script used to run the evaluation only, please refer to the above Run-evaluate section
+├── LICENSE
+├── model 
+│   ├── Layers.py # Multiple LinearLayer class used in the downstream QA tasks
+│   ├── modeling_albert.py # core ALBERT model class, including all the architecture for the downstream QA tasks
+│   ├── modeling_auto.py # generic class that help instantiate one of the question answering model classes, As the bert like model has similiar input and output. Use this can make clean code and fast develop and test. Refer to the same class in transformers library
+│   ├── modeling_bert.py # core BERT model class, including all the architecture for the downstream QA tasks
+│   └── modeling_roberta.py  # core BERT model class, including all the architecture for the downstream QA tasks
+├── README.md # This instruction you are reading now
+├── requirements.txt # The requirements for reproducing our results
+├── run_coqa.py # Main function script
+├── run.sh # run training with default setting
+└── utils
+    ├── adversarial.py # class for adversarial Projected gradient descent and fast graident method
+    └── tools.py # function used to calculate model parameter numbers
+```
 
 ## References
