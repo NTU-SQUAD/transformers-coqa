@@ -15,8 +15,6 @@ pip install tensorboardX
 python -m spacy download en
 ```
 
-## Folder Structure
-
 ## Data
 
 `coqa-dev-v1.0.json` for training, and `coqa-dev-v1.0.json` for evaluate.
@@ -47,6 +45,20 @@ You can get newest dataset from [CoQA](https://stanfordnlp.github.io/coqa/)
                    --threads 8
     ```
 
+4. To reproduce the result, we also provide shell scripts for all models:
+
+   ```bash
+   # bert
+   . ./run_bert.sh
+   # roberta, roberta-large
+   . ./run_roberta.sh
+   . ./run_roberta_large.sh
+   # albert, albert-xxlarge, albert-at
+   . ./run.sh
+   . ./run_albert_xxlarge
+   . ./run_albert_at
+   ```
+
 ## Run-evaluate
 
 After you get the prediction files, you can run evaluate seperately.
@@ -62,22 +74,22 @@ python evaluate.py --data-file data/coqa-dev-v1.0.json --pred-file albert-output
 ## Results
 
 Some commom parameters:
-`adam_epsilon=1e-08, data_dir='data/', do_lower_case=True, doc_stride=128,  fp16=False,  , history_len=2, learning_rate=3e-05, max_answer_length=30, max_grad_norm=-1.0, max_query_length=64, max_seq_length=512,  per_gpu_eval_batch_size=8, seed=42, train_file='coqa-train-v1.0.json', warmup_steps=2000, weight_decay=0.01,num_train_epochs=2`
+`adam_epsilon=1e-08, data_dir='data/', do_lower_case=True, doc_stride=128,  fp16=False, history_len=2, learning_rate=3e-05, max_answer_length=30, max_grad_norm=-1.0, max_query_length=64, max_seq_length=512,  per_gpu_eval_batch_size=8, seed=42, train_file='coqa-train-v1.0.json', warmup_steps=2000, weight_decay=0.01,num_train_epochs=2`
 
 | Model               | Em   | F1   | Parameters                                                   |
 | ------------------- | ---- | ---- | ------------------------------------------------------------ |
 | bert-base-uncased   | 68.5 | 78.4 | per_gpu_train_batch_size=16                                  |
 | roberta-base        | 72.2 | 81.6 | per_gpu_train_batch_size=16                                  |
-| albert-base-v2      | 71.5 | 81.0 | per_gpu_train_batch_size=12                                  |
+| albert-base-v2      | 71.5 | 81.0 | per_gpu_train_batch_size=8                                   |
 | albert-base-v2 + AT | 71.7 | 81.3 | per_gpu_train_batch_size=8                                   |
 | roberta-large       | 76.3 | 85.7 | per_gpu_train_batch_size=3                                   |
-| albert-xxlarge-v1   | 79.1 | 88.1 | per_gpu_train_batch_size=2,gradient_accumulation_steps=12, weight_decay=0 |
+| albert-xxlarge-v1   | 79.1 | 88.1 | per_gpu_train_batch_size=2, gradient_accumulation_steps=12, weight_decay=0 |
 
 ## Parameters
 
 ## Model explanation
 
-The following is the overview of the whole repo structure
+The following is the overview of the whole repo structure, we keep the structure similiar with the `transformers` fine-tune on `SQuAD`.
 
 ```bash
 ├── data
@@ -123,6 +135,9 @@ The following are detailed descrpition on some core scripts:
 
 ## References
 
-1. https://github.com/microsoft/SDNet
-2. https://github.com/huggingface/transformers
-3. https://github.com/adamluo1995/Bert4CoQA
+1. [coqa-baselines](https://github.com/stanfordnlp/coqa-baselines)
+2. [transformers](https://github.com/huggingface/transformers)
+3. [bert4coqa](https://github.com/adamluo1995/Bert4CoQA)
+4. [SDNet](https://github.com/microsoft/SDNet)
+
+5. [Adversarial Training](https://fyubang.com/2019/10/15/adversarial-train/)
