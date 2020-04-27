@@ -1,4 +1,4 @@
-python run_coqa.py --model_type roberta \
+python3 run_coqa.py --model_type roberta \
                    --model_name_or_path roberta-base \
                    --do_train \
                    --do_eval \

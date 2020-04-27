@@ -1,4 +1,4 @@
-python run_coqa.py --model_type roberta-large \
+python3 run_coqa.py --model_type roberta-large \
                    --model_name_or_path roberta-large \
                    --do_train \
                    --do_eval \

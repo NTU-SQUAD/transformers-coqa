@@ -1,4 +1,4 @@
-python run_coqa.py --model_type albert-xxlarge \
+python3 run_coqa.py --model_type albert-xxlarge \
                    --model_name_or_path albert-xxlarge-v1 \
                    --do_train \
                    --do_eval \

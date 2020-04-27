@@ -1,4 +1,4 @@
-python run_coqa.py --model_type albert \
+python3 run_coqa.py --model_type albert \
                    --model_name_or_path albert-base-v2 \
                    --do_train \
                    --do_eval \

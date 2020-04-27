@@ -27,7 +27,7 @@ You can get newest dataset from [CoQA](https://stanfordnlp.github.io/coqa/)
 3. or run `run_coqa.py` with parmeters,for example add adversarial training, and evaluate process will be done after training
 
     ```bash
-    python run_coqa.py --model_type albert \
+    python3 run_coqa.py --model_type albert \
                    --model_name_or_path albert-base-v2 \
                    --do_train \
                    --do_eval \
@@ -69,6 +69,22 @@ To evaluate, just run
 python evaluate.py --data-file <path_to_dev-v1.0.json> --pred-file <path_to_predictions>
 # if your trained the model using default parameters, it will be
 python evaluate.py --data-file data/coqa-dev-v1.0.json --pred-file albert-output/predictions_.json
+```
+
+## Docker
+We also provide `Dockerfile`, if you have problem with the environment, you can try to build a docker iamge locally and run the code inside docker.
+
+Notice: This is a GPU based image.
+```
+## build image
+docker build -t transformers-coqa .
+
+## run the iamge
+docker run -it coqa
+
+## run the code
+cd transformer-coqa && \
+. run.sh
 ```
 
 ## Results

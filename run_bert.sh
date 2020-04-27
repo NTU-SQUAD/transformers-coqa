@@ -1,4 +1,4 @@
-python run_coqa.py --model_type bert \
+python3 run_coqa.py --model_type bert \
                    --model_name_or_path bert-base-uncased \
                    --do_train \
                    --do_eval \
