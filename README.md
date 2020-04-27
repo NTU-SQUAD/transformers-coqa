@@ -156,15 +156,15 @@ The following are detailed descrpition on some core scripts:
 - [run_coqa.py](run_coqa.py): This script is the main function script used for training and evaluation. It:
    1. Defines All system parameters and some training parameter
    2. Setup CUDA, GPU, distributed training and logging, all seeds
-   3. Instantiate and initialize the corresponding model config, tokenizer and model itself
+   3. Instantiate and initialize the corresponding model config, tokenizer and pre-train model
    4. Calculate the number of trainable parameters
    5. Define and execute the training and evaluation function
 - [coqa.py](data/processors/coqa.py): This script contains the functions and classes used to conduct data preprocess, it:
-   1. Define the data structure of **CoqaExamples**, **CoqaFeatures** and **CoqaResult**
-   2. Define the class of **CoqaProcessor**, which is used to process the raw data to get examples. It implements the methods **get_raw_context_offsets** to add word offset, **find_span_with_gt** to find the best answer span, **_create_examples** to convert single conversation (context and QAs pairs) into **CoqaExample**, **get_examples** to parallel execute the _create_examples
-   3. Define the methods **coqa_convert_example_to_features** to convert **CoqaExamples** into **CoqaFeatures**, **coqa_convert_examples_to_features** to parallel execute **coqa_convert_example_to_features**
+   1. Define the data structure of `CoqaExamples`, `CoqaFeatures` and `CoqaResult`
+   2. Define the class of `CoqaProcessor`, which is used to process the raw data to get examples. It implements the methods `get_raw_context_offsets` to add word offset, `find_span_with_gt` to find the best answer span, `_create_examples` to convert single conversation (context and QAs pairs) into `CoqaExample`, `get_examples` to parallel execute the create_examples
+   3. Define the methods `coqa_convert_example_to_features` to convert `CoqaExamples` into `CoqaFeatures`, `coqa_convert_examples_to_features` to parallel execute `coqa_convert_example_to_features`
 - [modeling_albert.py](model/modeling_albert.py): This script contains the core ALBERT class and related downstream CoQA architecture, it:
-   1. Load the pre-trained ALBERT model from [transformer](https://github.com/huggingface/transformers) library
+   1. Load the pre-trained ALBERT model from `transformer` library
    2. Build downstream CoQA tasks architecture on the top of ALBERT last hidden state and pooler output to get the training loss for training and start, end, yes, no, unknown logits for prediction. This architecture is the same as shown in the presentation and report
 
 ## References
