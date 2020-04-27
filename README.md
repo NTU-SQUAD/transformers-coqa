@@ -18,11 +18,11 @@ python -m spacy download en
 ## Data
 
 `coqa-dev-v1.0.json` for training, and `coqa-dev-v1.0.json` for evaluate.
-You can get newest dataset from [CoQA](https://stanfordnlp.github.io/coqa/) 
+You can get newest dataset from [CoQA](https://stanfordnlp.github.io/coqa/) **OR** Direct download [Training set](https://nlp.stanford.edu/data/coqa/coqa-train-v1.0.json) and [Dev set](https://nlp.stanford.edu/data/coqa/coqa-dev-v1.0.json) seperately
 
 ## Run-train
 
-1. put coqa-train-v1.0.json and coqa-dev-v1.0.json in same folder, for example in folder `data`
+1. put coqa-train-v1.0.json and coqa-dev-v1.0.json in same folder, for example in folder `data/`
 2. if you want to running the code using the default settings, just run`./run.sh`
 3. or run `run_coqa.py` with parmeters,for example add adversarial training, and evaluate process will be done after training
 
@@ -134,7 +134,7 @@ The following are detailed descrpition on some core scripts:
    3. Define the methods **coqa_convert_example_to_features** to convert **CoqaExamples** into **CoqaFeatures**, **coqa_convert_examples_to_features** to parallel execute **coqa_convert_example_to_features**
 - [modeling_albert.py](model/modeling_albert.py): This script contains the core ALBERT class and related downstream CoQA architecture, it:
    1. import the ALBERT model from [transformer](https://github.com/huggingface/transformers) library
-   2. build downstream CoQA tasks architecture on the top of last hidden state and pooler output to get the training loss for training and start, end, yes, no, unknown logits for prediction.
+   2. build downstream CoQA tasks architecture on the top of last hidden state and pooler output to get the training loss for training and start, end, yes, no, unknown logits for prediction. This architecture is the same as shown in the presentation and report
 
 ## References
 
