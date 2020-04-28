@@ -8,7 +8,7 @@ python3 run_coqa.py --model_type albert \
                    --learning_rate 3e-5 \
                    --num_train_epochs 2 \
                    --output_dir albert-output/ \
-                   --do_lower_case \
                    --per_gpu_train_batch_size 8  \
                    --max_grad_norm -1 \
-                   --weight_decay 0.01
+                   --weight_decay 0.01 \
+                   --adversarial training

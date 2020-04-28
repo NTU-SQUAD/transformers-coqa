@@ -13,12 +13,12 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
-""" Finetuning the library models for question-answering on Coqa (DistilBERT, Bert, XLM, XLNet)."""
+
+""" Finetuning the library models for conversational-question-answering on Coqa (Bert, Albert，Roberta)."""
 
 import argparse
 import collections
 import glob
-import json
 import logging
 import os
 import random
@@ -54,12 +54,10 @@ except ImportError:
 logger = logging.getLogger(__name__)
 fileHandler = logging.FileHandler('{}.log'.format(datetime.now().strftime("%Y-%m-%d-%H:%M:%S")))
 logger.addHandler(fileHandler)
-MODEL_CONFIG_CLASSES = list(
-    MODEL_FOR_CONVERSATIONAL_QUESTION_ANSWERING_MAPPING.keys())
+MODEL_CONFIG_CLASSES = list(MODEL_FOR_CONVERSATIONAL_QUESTION_ANSWERING_MAPPING.keys())
 MODEL_TYPES = tuple(conf.model_type for conf in MODEL_CONFIG_CLASSES)
 
-ALL_MODELS = sum((tuple(conf.pretrained_config_archive_map.keys())
-                  for conf in MODEL_CONFIG_CLASSES), (), )
+ALL_MODELS = sum((tuple(conf.pretrained_config_archive_map.keys()) for conf in MODEL_CONFIG_CLASSES), (), )
 
 
 def set_seed(args):
@@ -84,18 +82,14 @@ def train(args, train_dataset, model, tokenizer):
         tb_writer = SummaryWriter()
 
     args.train_batch_size = args.per_gpu_train_batch_size * max(1, args.n_gpu)
-    train_sampler = RandomSampler(
-        train_dataset) if args.local_rank == -1 else DistributedSampler(train_dataset)
-    train_dataloader = DataLoader(
-        train_dataset, sampler=train_sampler, batch_size=args.train_batch_size)
+    train_sampler = RandomSampler(train_dataset) if args.local_rank == -1 else DistributedSampler(train_dataset)
+    train_dataloader = DataLoader(train_dataset, sampler=train_sampler, batch_size=args.train_batch_size)
 
     if args.max_steps > 0:
         t_total = args.max_steps
-        args.num_train_epochs = args.max_steps // (
-                len(train_dataloader) // args.gradient_accumulation_steps) + 1
+        args.num_train_epochs = args.max_steps // (len(train_dataloader) // args.gradient_accumulation_steps) + 1
     else:
-        t_total = len(
-            train_dataloader) // args.gradient_accumulation_steps * args.num_train_epochs
+        t_total = len(train_dataloader) // args.gradient_accumulation_steps * args.num_train_epochs
 
     # Prepare optimizer and schedule (linear warmup and decay)
     no_decay = ["bias", "LayerNorm.weight"]
@@ -167,13 +161,10 @@ def train(args, train_dataset, model, tokenizer):
     if os.path.exists(args.model_name_or_path):
         try:
             # set global_step to gobal_step of last saved checkpoint from model path
-            checkpoint_suffix = args.model_name_or_path.split(
-                "-")[-1].split("/")[0]
+            checkpoint_suffix = args.model_name_or_path.split("-")[-1].split("/")[0]
             global_step = int(checkpoint_suffix)
-            epochs_trained = global_step // (len(train_dataloader) //
-                                             args.gradient_accumulation_steps)
-            steps_trained_in_current_epoch = global_step % (
-                    len(train_dataloader) // args.gradient_accumulation_steps)
+            epochs_trained = global_step // (len(train_dataloader) //args.gradient_accumulation_steps)
+            steps_trained_in_current_epoch = global_step % (len(train_dataloader) // args.gradient_accumulation_steps)
 
             logger.info(
                 "  Continuing training from checkpoint, will skip to saved global_step")
@@ -194,8 +185,7 @@ def train(args, train_dataset, model, tokenizer):
     set_seed(args)
 
     for _ in train_iterator:
-        epoch_iterator = tqdm(train_dataloader, desc="Iteration",
-                              disable=args.local_rank not in [-1, 0])
+        epoch_iterator = tqdm(train_dataloader, desc="Iteration", disable=args.local_rank not in [-1, 0])
         for step, batch in enumerate(epoch_iterator):
 
             # Skip past any already trained steps if resuming training
@@ -259,7 +249,6 @@ def train(args, train_dataset, model, tokenizer):
                 # Log metrics
                 if args.local_rank in [-1, 0] and args.logging_steps > 0 and global_step % args.logging_steps == 0:
                     # Only evaluate when single GPU otherwise metrics may not average well
-                    # TODO: add arg to set evaluate steps
                     if args.local_rank == -1 and args.evaluate_during_training and global_step % (args.logging_steps * 10) == 0:
                         results, _ = evaluate(args, model, tokenizer)
                         for key, value in results.items():
@@ -272,26 +261,20 @@ def train(args, train_dataset, model, tokenizer):
 
                 # Save model checkpoint
                 if args.local_rank in [-1, 0] and args.save_steps > 0 and global_step % args.save_steps == 0:
-                    output_dir = os.path.join(
-                        args.output_dir, "checkpoint-{}".format(global_step))
+                    output_dir = os.path.join(args.output_dir, "checkpoint-{}".format(global_step))
                     if not os.path.exists(output_dir):
                         os.makedirs(output_dir)
                     # Take care of distributed/parallel training
-                    model_to_save = model.module if hasattr(
-                        model, "module") else model
+                    model_to_save = model.module if hasattr(model, "module") else model
                     model_to_save.save_pretrained(output_dir)
                     tokenizer.save_pretrained(output_dir)
 
-                    torch.save(args, os.path.join(
-                        output_dir, "training_args.bin"))
+                    torch.save(args, os.path.join(output_dir, "training_args.bin"))
                     logger.info("Saving model checkpoint to %s", output_dir)
 
-                    torch.save(optimizer.state_dict(), os.path.join(
-                        output_dir, "optimizer.pt"))
-                    torch.save(scheduler.state_dict(), os.path.join(
-                        output_dir, "scheduler.pt"))
-                    logger.info(
-                        "Saving optimizer and scheduler states to %s", output_dir)
+                    torch.save(optimizer.state_dict(), os.path.join(output_dir, "optimizer.pt"))
+                    torch.save(scheduler.state_dict(), os.path.join(output_dir, "scheduler.pt"))
+                    logger.info("Saving optimizer and scheduler states to %s", output_dir)
 
             if args.max_steps > 0 and global_step > args.max_steps:
                 epoch_iterator.close()
@@ -363,14 +346,11 @@ def evaluate(args, model, tokenizer, prefix=""):
             all_results.append(result)
 
     evalTime = timeit.default_timer() - start_time
-    logger.info("  Evaluation done in total %f secs (%f sec per example)",
-                evalTime, evalTime / len(dataset))
+    logger.info("  Evaluation done in total %f secs (%f sec per example)", evalTime, evalTime / len(dataset))
 
     # Compute predictions
-    output_prediction_file = os.path.join(
-        args.output_dir, "predictions_{}.json".format(prefix))
-    output_nbest_file = os.path.join(
-        args.output_dir, "nbest_predictions_{}.json".format(prefix))
+    output_prediction_file = os.path.join(args.output_dir, "predictions_{}.json".format(prefix))
+    output_nbest_file = os.path.join(args.output_dir, "nbest_predictions_{}.json".format(prefix))
 
     predictions = compute_predictions_logits(examples, features, all_results,
                                              args.n_best_size, args.max_answer_length,
@@ -416,10 +396,10 @@ def load_and_cache_examples(args, tokenizer, evaluate=False, output_examples=Fal
         else:
             processor = CoqaProcessor()
             if evaluate:
-                examples = processor.get_examples(args.data_dir, args.history_len, args.qa_tag,
+                examples = processor.get_examples(args.data_dir, args.history_len,
                                                   filename=args.predict_file, threads=args.threads)
             else:
-                examples = processor.get_examples(args.data_dir, args.history_len, args.qa_tag,
+                examples = processor.get_examples(args.data_dir, args.history_len,
                                                   filename=args.train_file, threads=args.threads)
 
         features, dataset = coqa_convert_examples_to_features(
@@ -433,10 +413,8 @@ def load_and_cache_examples(args, tokenizer, evaluate=False, output_examples=Fal
         )
 
         if args.local_rank in [-1, 0]:
-            logger.info("Saving features into cached file %s",
-                        cached_features_file)
-            torch.save({"features": features, "dataset": dataset,
-                        "examples": examples}, cached_features_file)
+            logger.info("Saving features into cached file %s", cached_features_file)
+            torch.save({"features": features, "dataset": dataset, "examples": examples}, cached_features_file)
 
     if args.local_rank == 0 and not evaluate:
         # Make sure only the first process in distributed training process the dataset, and the others will use the cache
@@ -575,8 +553,7 @@ def main():
                         type=int, help="Linear warmup over warmup_steps.")
     parser.add_argument("--history_len", default=2, type=int,
                         help="keep len of history quesiton-answers")
-    parser.add_argument('--qa_tag', action='store_true',
-                        help='add qa tag or not')
+
     parser.add_argument(
         "--n_best_size",
         default=20,
@@ -749,8 +726,7 @@ def main():
         train_dataset = load_and_cache_examples(
             args, tokenizer, evaluate=False, output_examples=False)
         global_step, tr_loss = train(args, train_dataset, model, tokenizer)
-        logger.info(" global_step = %s, average loss = %s",
-                    global_step, tr_loss)
+        logger.info(" global_step = %s, average loss = %s", global_step, tr_loss)
 
     # Save the trained model and the tokenizer
     if args.do_train and (args.local_rank == -1 or torch.distributed.get_rank() == 0):
@@ -788,11 +764,9 @@ def main():
                     os.path.dirname(c)
                     for c in sorted(glob.glob(args.output_dir + "/**/" + WEIGHTS_NAME, recursive=True))
                 )
-                logging.getLogger("transformers.modeling_utils").setLevel(
-                    logging.WARN)  # Reduce model loading logs
+                logging.getLogger("transformers.modeling_utils").setLevel(logging.WARN)  # Reduce model loading logs
         else:
-            logger.info("Loading checkpoint %s for evaluation",
-                        args.model_name_or_path)
+            logger.info("Loading checkpoint %s for evaluation", args.model_name_or_path)
             checkpoints = [args.model_name_or_path]
 
         logger.info("Evaluate the following checkpoints: %s", checkpoints)
