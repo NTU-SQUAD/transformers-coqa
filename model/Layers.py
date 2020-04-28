@@ -2,9 +2,9 @@ import torch.nn as nn
 import torch.nn.functional as F
 
 
-class MultiLinearLayer(nn.Module):
+class Multi_linear_layer(nn.Module):
     def __init__(self, n_layers, input_size, hidden_size, output_size, activation=None):
-        super(MultiLinearLayer, self).__init__()
+        super(Multi_linear_layer, self).__init__()
         self.linears = nn.ModuleList()
         self.linears.append(nn.Linear(input_size, hidden_size))
         for _ in range(1, n_layers - 1):

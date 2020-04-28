@@ -2,7 +2,7 @@ from transformers import AlbertModel, AlbertPreTrainedModel
 import torch.nn.functional as F
 from torch.nn import CrossEntropyLoss
 import torch
-from .Layers import MultiLinearLayer
+from .Layers import Multi_linear_layer
 
 
 class AlbertForConversationalQuestionAnswering(AlbertPreTrainedModel):
@@ -16,11 +16,11 @@ class AlbertForConversationalQuestionAnswering(AlbertPreTrainedModel):
         super(AlbertForConversationalQuestionAnswering, self).__init__(config)
         self.albert = AlbertModel(config)
         hidden_size = config.hidden_size
-        self.rational_l = MultiLinearLayer(n_layers, hidden_size, hidden_size, 1, activation)
-        self.logits_l = MultiLinearLayer(n_layers, hidden_size, hidden_size, 2, activation)
-        self.unk_l = MultiLinearLayer(n_layers, hidden_size, hidden_size, 1, activation)
-        self.attention_l = MultiLinearLayer(n_layers, hidden_size, hidden_size, 1, activation)
-        self.yn_l = MultiLinearLayer(n_layers, hidden_size, hidden_size, 2, activation)
+        self.rational_l = Multi_linear_layer(n_layers, hidden_size, hidden_size, 1, activation)
+        self.logits_l = Multi_linear_layer(n_layers, hidden_size, hidden_size, 2, activation)
+        self.unk_l = Multi_linear_layer(n_layers, hidden_size, hidden_size, 1, activation)
+        self.attention_l = Multi_linear_layer(n_layers, hidden_size, hidden_size, 1, activation)
+        self.yn_l = Multi_linear_layer(n_layers, hidden_size, hidden_size, 2, activation)
         self.beta = beta
 
         self.init_weights()
@@ -33,7 +33,7 @@ class AlbertForConversationalQuestionAnswering(AlbertPreTrainedModel):
             start_positions=None,
             end_positions=None,
             rational_mask=None,
-            cls_idx=None,
+            cls_idx = None,
             head_mask=None,
     ):
 
@@ -46,7 +46,7 @@ class AlbertForConversationalQuestionAnswering(AlbertPreTrainedModel):
 
         # last layer hidden-states of sequence, first token:classification token
         final_hidden, pooled_output = outputs
-        # rational_logits
+        # what rational_logits for?
         rational_logits = self.rational_l(final_hidden)
         rational_logits = torch.sigmoid(rational_logits)
         final_hidden = final_hidden * rational_logits
@@ -110,6 +110,8 @@ class AlbertForConversationalQuestionAnswering(AlbertPreTrainedModel):
                             torch.log(1 - rational_logits + 1e-7)
 
             rational_loss = (rational_loss * segment_mask).sum() / segment_mask.sum()
+
+            assert not torch.isnan(rational_loss)
 
             total_loss = (start_loss + end_loss) / 2 + rational_loss * self.beta
             return total_loss

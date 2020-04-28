@@ -1,6 +1,7 @@
 import collections
 import json
 import logging
+import math
 import os
 import re
 import string
@@ -13,13 +14,9 @@ import torch
 from torch.utils.data import TensorDataset
 from tqdm import tqdm
 from data.processors.utils import DataProcessor
+from transformers import BasicTokenizer
 
 logger = logging.getLogger(__name__)
-
-CLS_YES = 0
-CLS_NO = 1
-CLS_UNK = 2
-CLS_SPAN = 3
 
 
 def _improve_answer_span(doc_tokens, input_start, input_end, tokenizer, orig_answer_text):
@@ -67,13 +64,13 @@ def coqa_convert_example_to_features(example, tokenizer, max_seq_length, doc_str
     for qa in example.question_text:
         query_tokens.extend(tokenizer.tokenize(qa))
 
-    cls_idx = CLS_SPAN
+    cls_idx = 3
     if example.orig_answer_text == 'yes':
-        cls_idx = CLS_YES  # yes
+        cls_idx = 0  # yes
     elif example.orig_answer_text == 'no':
-        cls_idx = CLS_NO  # no
+        cls_idx = 1  # no
     elif example.orig_answer_text == 'unknown':
-        cls_idx = CLS_UNK  # unknown
+        cls_idx = 2  # unknown
 
     if len(query_tokens) > max_query_length:
         # keep tail
@@ -89,20 +86,28 @@ def coqa_convert_example_to_features(example, tokenizer, max_seq_length, doc_str
             tok_to_orig_index.append(i)
             all_doc_tokens.append(sub_token)
 
+    tok_start_position = None
+    tok_end_position = None
+    tok_r_start_position, tok_r_end_position = None, None
+    tok_pre_sp, tok_pre_ep = [], []
+
     # rational part
-    tok_r_start_position = orig_to_tok_index[example.rational_start_position]
+    tok_r_start_position = orig_to_tok_index[
+        example.rational_start_position]
     if example.rational_end_position < len(example.doc_tokens) - 1:
-        tok_r_end_position = orig_to_tok_index[example.rational_end_position + 1] - 1
+        tok_r_end_position = orig_to_tok_index[
+                                 example.rational_end_position + 1] - 1
     else:
         tok_r_end_position = len(all_doc_tokens) - 1
     # rational part end
 
-    if cls_idx < CLS_SPAN:
+    if cls_idx < 3:
         tok_start_position, tok_end_position = 0, 0
     else:
         tok_start_position = orig_to_tok_index[example.start_position]
         if example.end_position < len(example.doc_tokens) - 1:
-            tok_end_position = orig_to_tok_index[example.end_position + 1] - 1
+            tok_end_position = orig_to_tok_index[example.end_position +
+                                                 1] - 1
         else:
             tok_end_position = len(all_doc_tokens) - 1
         (tok_start_position, tok_end_position) = _improve_answer_span(
@@ -169,12 +174,18 @@ def coqa_convert_example_to_features(example, tokenizer, max_seq_length, doc_str
         assert len(input_mask) == max_seq_length
         assert len(segment_ids) == max_seq_length
 
+        start_position = None
+        end_position = None
+        rational_start_position = None
+        ration_end_position = None
+
         # rational_part
         doc_start = doc_span.start
         doc_end = doc_span.start + doc_span.length - 1
         out_of_span = False
         if example.rational_start_position == -1 or not (
-                tok_r_start_position >= doc_start and tok_r_end_position <= doc_end):
+                tok_r_start_position >= doc_start
+                and tok_r_end_position <= doc_end):
             out_of_span = True
         if out_of_span:
             rational_start_position = 0
@@ -187,16 +198,18 @@ def coqa_convert_example_to_features(example, tokenizer, max_seq_length, doc_str
 
         rational_mask = [0] * len(input_ids)
         if not out_of_span:
-            rational_mask[rational_start_position:rational_end_position + 1] = [1] * (
-                        rational_end_position - rational_start_position + 1)
+            rational_mask[rational_start_position:rational_end_position +
+                                                  1] = [1] * (rational_end_position -
+                                                              rational_start_position + 1)
 
-        if cls_idx >= CLS_SPAN:
+        if cls_idx >= 3:
             # For training, if our document chunk does not contain an annotation
             # we throw it out, since there is nothing to predict.
             doc_start = doc_span.start
             doc_end = doc_span.start + doc_span.length - 1
             out_of_span = False
-            if not (tok_start_position >= doc_start and tok_end_position <= doc_end):
+            if not (tok_start_position >= doc_start
+                    and tok_end_position <= doc_end):
                 out_of_span = True
             if out_of_span:
                 start_position = 0
@@ -229,8 +242,7 @@ def coqa_convert_example_to_features(example, tokenizer, max_seq_length, doc_str
     return features
 
 
-def coqa_convert_examples_to_features(examples, tokenizer, max_seq_length, doc_stride, max_query_length, is_training,
-                                      threads=1):
+def coqa_convert_examples_to_features(examples, tokenizer, max_seq_length, doc_stride, max_query_length, is_training, threads=1):
     features = []
     threads = min(threads, cpu_count())
     with Pool(threads, initializer=coqa_convert_example_to_features_init, initargs=(tokenizer,)) as p:
@@ -265,20 +277,20 @@ def coqa_convert_examples_to_features(examples, tokenizer, max_seq_length, doc_s
     del new_features
     all_input_ids = torch.tensor([f.input_ids for f in features], dtype=torch.long)
     all_input_mask = torch.tensor([f.input_mask for f in features], dtype=torch.long)
-    all_tokentype_ids = torch.tensor([f.segment_ids for f in features], dtype=torch.long)
+    all_segment_ids = torch.tensor([f.segment_ids for f in features], dtype=torch.long)
     if not is_training:
-        all_example_index = torch.arange(all_input_ids.size(0), dtype=torch.long)
-        dataset = TensorDataset(all_input_ids, all_tokentype_ids, all_input_mask, all_example_index)
+        all_example_index = torch.arange(all_input_ids.size(0),
+                                         dtype=torch.long)
+        dataset = TensorDataset(all_input_ids, all_segment_ids, all_input_mask, all_example_index)
     else:
         all_start_positions = torch.tensor([f.start_position for f in features], dtype=torch.long)
         all_end_positions = torch.tensor([f.end_position for f in features], dtype=torch.long)
         all_rational_mask = torch.tensor([f.rational_mask for f in features], dtype=torch.long)
         all_cls_idx = torch.tensor([f.cls_idx for f in features], dtype=torch.long)
-        dataset = TensorDataset(all_input_ids, all_tokentype_ids, all_input_mask, all_start_positions,
+        dataset = TensorDataset(all_input_ids, all_segment_ids, all_input_mask, all_start_positions,
                                 all_end_positions, all_rational_mask, all_cls_idx)
 
     return features, dataset
-
 
 class CoqaFeatures(object):
     """A single set of features of data."""
@@ -484,7 +496,7 @@ class CoqaProcessor(DataProcessor):
                 end_index = i
         return (start_index, end_index)
 
-    def get_examples(self, data_dir, history_len, filename=None, threads=1):
+    def get_examples(self, data_dir, history_len, add_qa_tag, filename=None,threads=1):
         """
         Returns the training examples from the data directory.
 
@@ -504,16 +516,19 @@ class CoqaProcessor(DataProcessor):
 
         threads = min(threads, cpu_count())
         with Pool(threads) as p:
-            annotate_ = partial(self._create_examples, history_len=history_len)
+            annotate_ = partial(self._create_examples,  history_len=history_len, add_qa_tag=add_qa_tag)
             examples = list(tqdm(
                 p.imap(annotate_, input_data),
                 total=len(input_data),
                 desc="convert coqa examples to features",
             ))
+        # print(len(examples))
         examples = [item for sublist in examples for item in sublist]
+        # print(len(examples))
         return examples
+        # return self._create_examples(input_data, history_len, add_qa_tag)
 
-    def _create_examples(self, input_data, history_len):
+    def _create_examples(self, input_data, history_len, add_qa_tag):
         nlp = spacy.load('en_core_web_sm', parser=False)
         examples = []
         # for data_idx in tqdm(range(len(input_data)), desc='Generating examples'):
@@ -592,9 +607,9 @@ class CoqaProcessor(DataProcessor):
                 if j < 0:
                     continue
 
-                long_question += ' ' + datum['questions'][j]['input_text']
+                long_question += (' <Q> ' if add_qa_tag else ' ') + datum['questions'][j]['input_text']
                 if j < i:
-                    long_question += ' ' + datum['answers'][j]['input_text'] + ' [SEP]'
+                    long_question += (' <A> ' if add_qa_tag else ' ') + datum['answers'][j]['input_text'] + ' [SEP]'
 
                 long_question = long_question.strip()
                 long_questions.append(long_question)
