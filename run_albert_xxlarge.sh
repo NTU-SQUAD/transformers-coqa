@@ -8,7 +8,6 @@ python3 run_coqa.py --model_type albert-xxlarge \
                    --learning_rate 3e-5 \
                    --num_train_epochs 2 \
                    --output_dir albert-xxlarge-output/ \
-                   --do_lower_case \
                    --per_gpu_train_batch_size 2  \
                    --max_grad_norm -1 \
                    --gradient_accumulation_steps 12 \

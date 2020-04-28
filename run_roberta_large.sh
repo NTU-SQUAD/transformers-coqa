@@ -8,7 +8,6 @@ python3 run_coqa.py --model_type roberta-large \
                    --learning_rate 3e-5 \
                    --num_train_epochs 2 \
                    --output_dir roberta-large-output/ \
-                   --do_lower_case \
                    --per_gpu_train_batch_size 3  \
                    --max_grad_norm -1 \
                    --weight_decay 0.01
