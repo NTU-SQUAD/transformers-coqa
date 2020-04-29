@@ -236,7 +236,18 @@ def train(args, train_dataset, model, tokenizer):
                     else:
                         pgd.restore_grad()
                     loss_adv = model(**inputs)
-                    loss_adv.backward()
+
+                    if args.n_gpu > 1:
+                        loss_adv = loss_adv.mean()  # mean() to average on multi-gpu parallel (not distributed) training
+                    if args.gradient_accumulation_steps > 1:
+                        loss_adv = loss_adv / args.gradient_accumulation_steps
+
+                    if args.fp16:
+                        with amp.scale_loss(loss_adv, optimizer) as scaled_loss:
+                            scaled_loss.backward()
+                    else:
+                        loss_adv.backward()
+
                 pgd.restore()
 
             tr_loss += loss.item()
