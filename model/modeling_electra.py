@@ -1,11 +1,28 @@
-from transformers import DistilBertModel, DistilBertPreTrainedModel
+from transformers import (
+    BertPreTrainedModel,
+    ElectraModel,
+    ElectraConfig,
+    ELECTRA_PRETRAINED_MODEL_ARCHIVE_MAP,
+    load_tf_weights_in_electra
+)
 import torch.nn.functional as F
 from torch.nn import CrossEntropyLoss
 import torch
 from .Layers import MultiLinearLayer
 
 
-class DistilBertForConversationalQuestionAnswering(DistilBertPreTrainedModel):
+class ElectraPreTrainedModel(BertPreTrainedModel):
+    """ An abstract class to handle weights initialization and
+        a simple interface for downloading and loading pretrained models.
+    """
+
+    config_class = ElectraConfig
+    pretrained_model_archive_map = ELECTRA_PRETRAINED_MODEL_ARCHIVE_MAP
+    load_tf_weights = load_tf_weights_in_electra
+    base_model_prefix = "electra"
+
+
+class ElectraForConversationalQuestionAnswering(ElectraPreTrainedModel):
     def __init__(
             self,
             config,
@@ -13,8 +30,8 @@ class DistilBertForConversationalQuestionAnswering(DistilBertPreTrainedModel):
             activation='relu',
             beta=100,
     ):
-        super(DistilBertForConversationalQuestionAnswering, self).__init__(config)
-        self.distilbert = DistilBertModel(config)
+        super(ElectraForConversationalQuestionAnswering, self).__init__(config)
+        self.electra = ElectraModel(config)
         hidden_size = config.hidden_size
         self.rational_l = MultiLinearLayer(n_layers, hidden_size, hidden_size, 1, activation)
         self.logits_l = MultiLinearLayer(n_layers, hidden_size, hidden_size, 2, activation)
@@ -37,7 +54,7 @@ class DistilBertForConversationalQuestionAnswering(DistilBertPreTrainedModel):
             head_mask=None,
     ):
 
-        outputs = self.distilbert(
+        outputs = self.electra(
             input_ids,
             token_type_ids=token_type_ids,
             attention_mask=attention_mask,
@@ -45,7 +62,8 @@ class DistilBertForConversationalQuestionAnswering(DistilBertPreTrainedModel):
         )
 
         # last layer hidden-states of sequence, first token:classification token
-        final_hidden, pooled_output = outputs
+        final_hidden = outputs
+        pooled_output = outputs[0]
         # rational_logits
         rational_logits = self.rational_l(final_hidden)
         rational_logits = torch.sigmoid(rational_logits)
@@ -105,8 +123,9 @@ class DistilBertForConversationalQuestionAnswering(DistilBertPreTrainedModel):
 
             # use rational span to help calculate loss
             rational_mask = rational_mask.type(final_hidden.dtype)
-            rational_loss = -alpha * ((1 - rational_logits)**gamma) * rational_mask * torch.log(rational_logits + 1e-7) \
-                            - (1 - alpha) * (rational_logits**gamma) * (1 - rational_mask) * \
+            rational_loss = -alpha * ((1 - rational_logits) ** gamma) * rational_mask * torch.log(
+                rational_logits + 1e-7) \
+                            - (1 - alpha) * (rational_logits ** gamma) * (1 - rational_mask) * \
                             torch.log(1 - rational_logits + 1e-7)
 
             rational_loss = (rational_loss * segment_mask).sum() / segment_mask.sum()

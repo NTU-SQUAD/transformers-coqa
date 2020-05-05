@@ -1,5 +1,5 @@
-python3 run_coqa.py --model_type distilbert \
-                   --model_name_or_path distilbert-base-uncased \
+python3 run_coqa.py --model_type electra \
+                   --model_name_or_path google/electra-small-discriminator \
                    --do_train \
                    --do_eval \
                    --data_dir data/ \
@@ -7,8 +7,7 @@ python3 run_coqa.py --model_type distilbert \
                    --predict_file coqa-dev-v1.0.json \
                    --learning_rate 3e-5 \
                    --num_train_epochs 2 \
-                   --output_dir distilbert-output/ \
-                   --do_lower_case \
+                   --output_dir electra-output/ \
                    --per_gpu_train_batch_size 16  \
                    --max_grad_norm -1 \
                    --weight_decay 0.01
