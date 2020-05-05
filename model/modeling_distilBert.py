@@ -44,7 +44,8 @@ class DistilBertForConversationalQuestionAnswering(DistilBertPreTrainedModel):
         )
 
         # last layer hidden-states of sequence, first token:classification token
-        final_hidden, pooled_output = outputs
+        final_hidden = outputs[0]
+        pooled_output = final_hidden[:0]
         # rational_logits
         rational_logits = self.rational_l(final_hidden)
         rational_logits = torch.sigmoid(rational_logits)

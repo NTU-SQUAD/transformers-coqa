@@ -62,8 +62,8 @@ class ElectraForConversationalQuestionAnswering(ElectraPreTrainedModel):
         )
 
         # last layer hidden-states of sequence, first token:classification token
-        final_hidden = outputs
-        pooled_output = outputs[0]
+        final_hidden = outputs[0]
+        pooled_output = final_hidden[:0]
         # rational_logits
         rational_logits = self.rational_l(final_hidden)
         rational_logits = torch.sigmoid(rational_logits)
