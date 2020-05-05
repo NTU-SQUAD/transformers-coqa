@@ -39,7 +39,6 @@ class DistilBertForConversationalQuestionAnswering(DistilBertPreTrainedModel):
 
         outputs = self.distilbert(
             input_ids,
-            token_type_ids=token_type_ids,
             attention_mask=attention_mask,
             head_mask=head_mask,
         )
